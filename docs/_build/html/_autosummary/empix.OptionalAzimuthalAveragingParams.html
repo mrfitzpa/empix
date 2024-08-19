@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2.12. empix.OptionalAzimuthalAveragingParams &mdash; empix  documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/readthedocs_custom.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="2.13. empix.OptionalAzimuthalIntegrationParams" href="empix.OptionalAzimuthalIntegrationParams.html" />
+    <link rel="prev" title="2.11. empix.OptionalAnnularIntegrationParams" href="empix.OptionalAnnularIntegrationParams.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            empix
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../INSTALL.html">1. Installation instructions</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="empix.html">2. Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="empix.abs_sq.html">2.1. empix.abs_sq</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empix.annularly_average.html">2.2. empix.annularly_average</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empix.annularly_integrate.html">2.3. empix.annularly_integrate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empix.azimuthally_average.html">2.4. empix.azimuthally_average</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empix.azimuthally_integrate.html">2.5. empix.azimuthally_integrate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empix.crop.html">2.6. empix.crop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empix.cumulatively_integrate_1d.html">2.7. empix.cumulatively_integrate_1d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empix.downsample.html">2.8. empix.downsample</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empix.resample.html">2.9. empix.resample</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empix.OptionalAnnularAveragingParams.html">2.10. empix.OptionalAnnularAveragingParams</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empix.OptionalAnnularIntegrationParams.html">2.11. empix.OptionalAnnularIntegrationParams</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">2.12. empix.OptionalAzimuthalAveragingParams</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams"><code class="docutils literal notranslate"><span class="pre">OptionalAzimuthalAveragingParams</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.de_pre_serialize"><code class="docutils literal notranslate"><span class="pre">OptionalAzimuthalAveragingParams.de_pre_serialize()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.dump"><code class="docutils literal notranslate"><span class="pre">OptionalAzimuthalAveragingParams.dump()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.dumps"><code class="docutils literal notranslate"><span class="pre">OptionalAzimuthalAveragingParams.dumps()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.load"><code class="docutils literal notranslate"><span class="pre">OptionalAzimuthalAveragingParams.load()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.loads"><code class="docutils literal notranslate"><span class="pre">OptionalAzimuthalAveragingParams.loads()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.pre_serialize"><code class="docutils literal notranslate"><span class="pre">OptionalAzimuthalAveragingParams.pre_serialize()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.update"><code class="docutils literal notranslate"><span class="pre">OptionalAzimuthalAveragingParams.update()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="empix.OptionalAzimuthalIntegrationParams.html">2.13. empix.OptionalAzimuthalIntegrationParams</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empix.OptionalCroppingParams.html">2.14. empix.OptionalCroppingParams</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empix.OptionalCumulative1dIntegrationParams.html">2.15. empix.OptionalCumulative1dIntegrationParams</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empix.OptionalDownsamplingParams.html">2.16. empix.OptionalDownsamplingParams</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empix.OptionalResamplingParams.html">2.17. empix.OptionalResamplingParams</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empix.version.html">2.18. empix.version</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">3. Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../todo.html">4. To-Do list</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">5. CHANGELOG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">6. License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">empix</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="empix.html"><span class="section-number">2. </span>empix</a></li>
+      <li class="breadcrumb-item active"><span class="section-number">2.12. </span>empix.OptionalAzimuthalAveragingParams</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="empix-optionalazimuthalaveragingparams">
+<h1><span class="section-number">2.12. </span>empix.OptionalAzimuthalAveragingParams<a class="headerlink" href="#empix-optionalazimuthalaveragingparams" title="Permalink to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="empix.OptionalAzimuthalAveragingParams">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">OptionalAzimuthalAveragingParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radial_range</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_bins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/empix.html#OptionalAzimuthalAveragingParams"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empix.OptionalAzimuthalAveragingParams" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://mrfitzpa.github.io/fancytypes/_build/html/_autosummary/fancytypes.PreSerializableAndUpdatable.html#fancytypes.PreSerializableAndUpdatable" title="(in fancytypes)"><code class="xref py py-class docutils literal notranslate"><span class="pre">PreSerializableAndUpdatable</span></code></a></p>
+<p>The set of optional parameters for the function
+<a class="reference internal" href="empix.azimuthally_average.html#empix.azimuthally_average" title="empix.azimuthally_average"><code class="xref py py-func docutils literal notranslate"><span class="pre">empix.azimuthally_average()</span></code></a>.</p>
+<p>The Python function <a class="reference internal" href="empix.azimuthally_integrate.html#empix.azimuthally_integrate" title="empix.azimuthally_integrate"><code class="xref py py-func docutils literal notranslate"><span class="pre">empix.azimuthally_integrate()</span></code></a> averages
+azimuthally a given input 2D <code class="docutils literal notranslate"><span class="pre">hyperspy</span></code> signal. The Python function
+assumes that the input 2D <code class="docutils literal notranslate"><span class="pre">hyperspy</span></code> signal samples from a mathematical
+function <span class="math notranslate nohighlight">\(F_{\mathbf{m}}\left(u_{x},u_{y}\right)\)</span> which is piecewise
+continuous in <span class="math notranslate nohighlight">\(u_{x}\)</span> and <span class="math notranslate nohighlight">\(u_{y}\)</span>, where <span class="math notranslate nohighlight">\(u_{x}\)</span> and
+<span class="math notranslate nohighlight">\(u_{y}\)</span> are the horizontal and vertical coordinates in the signal
+space of the input signal, and <span class="math notranslate nohighlight">\(\mathbf{m}\)</span> is a vector of integers
+representing the navigation indices of the input signal. The Python function
+approximates the azimuthal average of
+<span class="math notranslate nohighlight">\(F_{\mathbf{m}}\left(u_{x},u_{y}\right)\)</span> given the input signal. We
+define the azimuthal average of
+<span class="math notranslate nohighlight">\(F_{\mathbf{m}}\left(u_{x},u_{y}\right)\)</span> as</p>
+<div class="math notranslate nohighlight" id="equation-azimuthal-average-1">
+<span class="eqno">(2.12.1)<a class="headerlink" href="#equation-azimuthal-average-1" title="Permalink to this equation">¶</a></span>\[\begin{split}&amp;\overline{S}_{\mathbf{m}}\left(\left.R_{xy}=r_{xy}\right|
+0\le U_{\phi}&lt;2\pi;c_{x},c_{y}\right)\\&amp;\quad=\frac{1}{2\pi r_{xy}}
+\int_{0}^{2\pi}du_{\phi}\,u_{xy}
+F_{\mathbf{m}}\left(c_{x}+r_{xy}\cos\left(u_{\phi}\right),
+c_{y}+r_{xy}\sin\left(u_{\phi}\right)\right),\end{split}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\left(c_{x},c_{y}\right)\)</span> is the reference point from which the
+radial distance <span class="math notranslate nohighlight">\(r_{xy}\)</span> is defined for the azimuthal averaging.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>center</strong><span class="classifier"><cite>array_like</cite> (<cite>float</cite>, shape=(2,)) | <cite>None</cite>, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">center</span></code> is set to <code class="docutils literal notranslate"><span class="pre">None</span></code>, then the reference point
+<span class="math notranslate nohighlight">\(\left(c_{x},c_{y}\right)\)</span>, from which the radial distance is
+defined for the azimuthal averaging, is set to the signal space
+coordinates corresponding to the center signal space pixel.  Otherwise,
+if <code class="docutils literal notranslate"><span class="pre">center</span></code> is set to a pair of floating-point numbers, then
+<code class="docutils literal notranslate"><span class="pre">center[0]</span></code> and <code class="docutils literal notranslate"><span class="pre">center[1]</span></code> specify <span class="math notranslate nohighlight">\(c_{x}\)</span> and <span class="math notranslate nohighlight">\(c_{y}\)</span>
+respectively, in the same units of the corresponding signal space axes
+of the input signal.</p>
+</dd>
+<dt><strong>radial_range</strong><span class="classifier"><cite>array_like</cite> (<cite>float</cite>, shape=(2,)) | <cite>None</cite>, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">radial_range</span></code> is set to <code class="docutils literal notranslate"><span class="pre">None</span></code>, then the radial range, over
+which the azimuthal averaging is performed, is from zero to the largest
+radial distance within the signal space boundaries of the input signal
+for all azimuthal angles. Otherwise, if <code class="docutils literal notranslate"><span class="pre">radial_range</span></code> is set to a
+pair of floating-point numbers, then <code class="docutils literal notranslate"><span class="pre">radial_range[0]</span></code> and
+<code class="docutils literal notranslate"><span class="pre">radial_range[1]</span></code> specify the minimum and maximum radial distances of
+the radial range respectively, in the same units of the horizontal and
+vertical axes respectively of the signal space of the input signal. Note
+that in this case <code class="docutils literal notranslate"><span class="pre">radial_range</span></code> must satisfy
+<code class="docutils literal notranslate"><span class="pre">0&lt;=radial_range[0]&lt;=radial_range[1]</span></code>. Moreover, the function
+represented by the input signal is assumed to be equal to zero
+everywhere outside of the signal space boundaries of said input signal.</p>
+</dd>
+<dt><strong>num_bins</strong><span class="classifier"><cite>int</cite> | <cite>None</cite>, optional</span></dt><dd><p><code class="docutils literal notranslate"><span class="pre">num_bins</span></code> must either be a positive integer or of the <cite>NoneType</cite>: if
+the former, then the dimension of the signal space of the output signal
+<code class="docutils literal notranslate"><span class="pre">output_signal</span></code> is set to <code class="docutils literal notranslate"><span class="pre">num_bins</span></code>; if the latter, then the
+dimension of the signal space of <code class="docutils literal notranslate"><span class="pre">output_signal</span></code> is set to
+<code class="docutils literal notranslate"><span class="pre">min(input_signal.data.shape[-2:])</span></code>, where <code class="docutils literal notranslate"><span class="pre">input_signal</span></code> is the
+input <code class="docutils literal notranslate"><span class="pre">hyperspy</span></code> signal.</p>
+</dd>
+<dt><strong>title</strong><span class="classifier"><cite>str</cite> | <cite>None</cite>, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">title</span></code> is set to <code class="docutils literal notranslate"><span class="pre">None</span></code>, then the title of the output signal
+<code class="docutils literal notranslate"><span class="pre">output_signal</span></code> is set to <code class="docutils literal notranslate"><span class="pre">&quot;Azimuthally</span> <span class="pre">Averaged</span> <span class="pre">&quot;</span> <span class="pre">+</span>
+<span class="pre">input_signal.metadata.General.title</span></code>, where <code class="docutils literal notranslate"><span class="pre">input_signal</span></code> is the 
+input <code class="docutils literal notranslate"><span class="pre">hyperspy</span></code> signal.  Otherwise, if <code class="docutils literal notranslate"><span class="pre">title</span></code> is a <cite>str</cite>, then the
+<code class="docutils literal notranslate"><span class="pre">output_signal.metadata.General.title</span></code> is set to the value of 
+<code class="docutils literal notranslate"><span class="pre">title</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Attributes</dt>
+<dd class="field-even"><dl>
+<dt><strong>core_attrs</strong><span class="classifier"><cite>dict</cite>, read-only</span></dt><dd><p>A <cite>dict</cite> representation of the core attributes: each <cite>dict</cite> key is a
+<cite>str</cite> representing the name of a core attribute, and the corresponding
+<cite>dict</cite> value is the object to which said core attribute is set. The core
+attributes are the same as the construction parameters, except that 
+their values might have been updated since construction.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.de_pre_serialize" title="empix.OptionalAzimuthalAveragingParams.de_pre_serialize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">de_pre_serialize</span></code></a>(serializable_rep)</p></td>
+<td><p>Construct an instance from a serializable representation.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.dump" title="empix.OptionalAzimuthalAveragingParams.dump"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dump</span></code></a>(filename[, overwrite])</p></td>
+<td><p>Serialize instance and save the result in a JSON file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.dumps" title="empix.OptionalAzimuthalAveragingParams.dumps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dumps</span></code></a>()</p></td>
+<td><p>Serialize instance.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.load" title="empix.OptionalAzimuthalAveragingParams.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>(filename)</p></td>
+<td><p>Construct an instance from a serialized representation that is  stored in a JSON file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.loads" title="empix.OptionalAzimuthalAveragingParams.loads"><code class="xref py py-obj docutils literal notranslate"><span class="pre">loads</span></code></a>(serialized_rep)</p></td>
+<td><p>Construct an instance from a serialized representation.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.pre_serialize" title="empix.OptionalAzimuthalAveragingParams.pre_serialize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pre_serialize</span></code></a>()</p></td>
+<td><p>Pre-serialize instance.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.update" title="empix.OptionalAzimuthalAveragingParams.update"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update</span></code></a>(core_attr_subset)</p></td>
+<td><p>Update a subset of the core attributes.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.de_pre_serialize" title="empix.OptionalAzimuthalAveragingParams.de_pre_serialize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">de_pre_serialize</span></code></a></p></td>
+<td><p>Construct an instance from a serializable representation.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.dump" title="empix.OptionalAzimuthalAveragingParams.dump"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dump</span></code></a></p></td>
+<td><p>Serialize instance and save the result in a JSON file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.dumps" title="empix.OptionalAzimuthalAveragingParams.dumps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dumps</span></code></a></p></td>
+<td><p>Serialize instance.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.load" title="empix.OptionalAzimuthalAveragingParams.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a></p></td>
+<td><p>Construct an instance from a serialized representation that is  stored in a JSON file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.loads" title="empix.OptionalAzimuthalAveragingParams.loads"><code class="xref py py-obj docutils literal notranslate"><span class="pre">loads</span></code></a></p></td>
+<td><p>Construct an instance from a serialized representation.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.pre_serialize" title="empix.OptionalAzimuthalAveragingParams.pre_serialize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pre_serialize</span></code></a></p></td>
+<td><p>Pre-serialize instance.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#empix.OptionalAzimuthalAveragingParams.update" title="empix.OptionalAzimuthalAveragingParams.update"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update</span></code></a></p></td>
+<td><p>Update a subset of the core attributes.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">core_attrs</span></code></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="empix.OptionalAzimuthalAveragingParams.de_pre_serialize">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">de_pre_serialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">serializable_rep</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#empix.OptionalAzimuthalAveragingParams.de_pre_serialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct an instance from a serializable representation.</p>
+<p>We define pre-serialization as the process of converting an object into
+a form that can be subsequently serialized into a JSON format. We refer
+to objects resulting from pre-serialization as serializable objects.</p>
+<p>We define de-pre-serialization as the process of converting a
+serializable object into its original type, i.e. de-pre-serialization is
+the reverse process of pre-serialization.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>serializable_rep</strong><span class="classifier"><cite>dict</cite></span></dt><dd><p>A serializable representation of an instance. Serializable
+representations can be generated using the instance method 
+<a class="reference external" href="https://mrfitzpa.github.io/fancytypes/_build/html/_autosummary/fancytypes.PreSerializable.html#fancytypes.PreSerializable.pre_serialize" title="(in fancytypes)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fancytypes.PreSerializable.pre_serialize()</span></code></a>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl>
+<dt><strong>pre_serializable_obj</strong><span class="classifier"><a class="reference external" href="https://mrfitzpa.github.io/fancytypes/_build/html/_autosummary/fancytypes.PreSerializable.html#fancytypes.PreSerializable" title="(in fancytypes)"><code class="xref py py-class docutils literal notranslate"><span class="pre">fancytypes.PreSerializable</span></code></a></span></dt><dd><p>An instance constructed from the serializable representation
+<code class="docutils literal notranslate"><span class="pre">serializable_rep</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="empix.OptionalAzimuthalAveragingParams.dump">
+<span class="sig-name descname"><span class="pre">dump</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#empix.OptionalAzimuthalAveragingParams.dump" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize instance and save the result in a JSON file.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>filename</strong><span class="classifier"><cite>str</cite></span></dt><dd><p>The relative or absolute path to the JSON file in which to store the
+serialized representation of an instance.</p>
+</dd>
+<dt><strong>overwrite</strong><span class="classifier"><cite>bool</cite>, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">overwrite</span></code> is set to <code class="docutils literal notranslate"><span class="pre">False</span></code> and a file exists at the path
+<code class="docutils literal notranslate"><span class="pre">filename</span></code>, then the serialized instance is not written to that
+file and an exception is raised. Otherwise, the serialized instance
+will be written to that file barring no other issues occur.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"></dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="empix.OptionalAzimuthalAveragingParams.dumps">
+<span class="sig-name descname"><span class="pre">dumps</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#empix.OptionalAzimuthalAveragingParams.dumps" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize instance.</p>
+<dl class="field-list">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><dl>
+<dt><strong>serialized_rep</strong><span class="classifier"><cite>dict</cite></span></dt><dd><p>A serialized representation of an instance.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="empix.OptionalAzimuthalAveragingParams.load">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#empix.OptionalAzimuthalAveragingParams.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct an instance from a serialized representation that is 
+stored in a JSON file.</p>
+<p>Users can save serialized representations to JSON files using the method
+<a class="reference external" href="https://mrfitzpa.github.io/fancytypes/_build/html/_autosummary/fancytypes.PreSerializable.html#fancytypes.PreSerializable.dump" title="(in fancytypes)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fancytypes.PreSerializable.dump()</span></code></a>.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>filename</strong><span class="classifier"><cite>str</cite></span></dt><dd><p>The relative or absolute path to the JSON file that is storing the
+serialized representation of an instance.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl>
+<dt><strong>pre_serializable_obj</strong><span class="classifier"><a class="reference external" href="https://mrfitzpa.github.io/fancytypes/_build/html/_autosummary/fancytypes.PreSerializable.html#fancytypes.PreSerializable" title="(in fancytypes)"><code class="xref py py-class docutils literal notranslate"><span class="pre">fancytypes.PreSerializable</span></code></a></span></dt><dd><p>An instance constructed from the serialized representation
+stored in the JSON file.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="empix.OptionalAzimuthalAveragingParams.loads">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">loads</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">serialized_rep</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#empix.OptionalAzimuthalAveragingParams.loads" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct an instance from a serialized representation.</p>
+<p>Users can generate serialized representations using the method
+<a class="reference external" href="https://mrfitzpa.github.io/fancytypes/_build/html/_autosummary/fancytypes.PreSerializable.html#fancytypes.PreSerializable.dumps" title="(in fancytypes)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fancytypes.PreSerializable.dumps()</span></code></a>.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>serialized_rep</strong><span class="classifier"><cite>str</cite> | <cite>bytes</cite> | <cite>bytearray</cite></span></dt><dd><p>The serialized representation.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl>
+<dt><strong>pre_serializable_obj</strong><span class="classifier"><a class="reference external" href="https://mrfitzpa.github.io/fancytypes/_build/html/_autosummary/fancytypes.PreSerializable.html#fancytypes.PreSerializable" title="(in fancytypes)"><code class="xref py py-class docutils literal notranslate"><span class="pre">fancytypes.PreSerializable</span></code></a></span></dt><dd><p>An instance constructed from the serialized representation.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="empix.OptionalAzimuthalAveragingParams.pre_serialize">
+<span class="sig-name descname"><span class="pre">pre_serialize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#empix.OptionalAzimuthalAveragingParams.pre_serialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pre-serialize instance.</p>
+<p>We define pre-serialization as the process of converting an object into
+a form that can be subsequently serialized into a JSON format. We refer
+to objects resulting from pre-serialization as serializable objects.</p>
+<p>We define de-pre-serialization as the process of converting a
+serializable object into its original type, i.e. de-pre-serialization is
+the reverse process of pre-serialization.</p>
+<dl class="field-list">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><dl>
+<dt><strong>serializable_rep</strong><span class="classifier"><cite>dict</cite></span></dt><dd><p>A serializable representation of an instance.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="empix.OptionalAzimuthalAveragingParams.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">core_attr_subset</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#empix.OptionalAzimuthalAveragingParams.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update a subset of the core attributes.</p>
+<p>Upon updating the subset of core attributes, the validation and
+conversion functions specified in the private class attribute
+<code class="docutils literal notranslate"><span class="pre">_validation_and_conversion_funcs</span></code> are applied. See the preamble of
+the documentation for the class
+<a class="reference external" href="https://mrfitzpa.github.io/fancytypes/_build/html/_autosummary/fancytypes.PreSerializableAndUpdatable.html#fancytypes.PreSerializableAndUpdatable" title="(in fancytypes)"><code class="xref py py-class docutils literal notranslate"><span class="pre">fancytypes.PreSerializableAndUpdatable</span></code></a> for a discussion on the
+validation and conversion functions.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>core_attr_subset</strong><span class="classifier"><cite>dict</cite></span></dt><dd><p>A <cite>dict</cite> specifying how to update a subset of the core attributes:
+each <cite>dict</cite> key of <code class="docutils literal notranslate"><span class="pre">core_attr_subset</span></code> that is also a key of the
+instance attribute
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">fancytypes.PreSerializableAndUpdatable.core_attrs</span></code> is a <cite>str</cite>
+representing the name of a core attribute, and the corresponding
+<cite>dict</cite> value is the object to which said core attribute is to be
+set. Any <cite>dict</cite> keys of <code class="docutils literal notranslate"><span class="pre">core_attr_subset</span></code> that are not keys of
+the instance attribute
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">fancytypes.PreSerializableAndUpdatable.core_attrs</span></code> are
+ignored in the update procedure along with the corresponding <cite>dict</cite>
+values.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="empix.OptionalAnnularIntegrationParams.html" class="btn btn-neutral float-left" title="2.11. empix.OptionalAnnularIntegrationParams" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="empix.OptionalAzimuthalIntegrationParams.html" class="btn btn-neutral float-right" title="2.13. empix.OptionalAzimuthalIntegrationParams" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Matthew Fitzpatrick.
+      <span class="lastupdated">Last updated on Aug 15, 2023.
+      </span></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

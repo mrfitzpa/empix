@@ -1,0 +1,3 @@
+fancytypes @ git+https://github.com/mrfitzpa/fancytypes.git
+hyperspy[all]
+pyFAI
