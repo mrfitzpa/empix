@@ -1,3 +1,16 @@
+# -*- coding: utf-8 -*-
+# Copyright 2024 Matthew Fitzpatrick.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation, version 3.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program. If not, see <https://www.gnu.org/licenses/gpl-3.0.html>.
 """``empix`` is a Python library that contains tools for analyzing electron
 microscopy data that are not available in `hyperspy
 <https://hyperspy.org/hyperspy-doc/current/index.html>`_.
@@ -9,6 +22,11 @@ microscopy data that are not available in `hyperspy
 #####################################
 ## Load libraries/packages/modules ##
 #####################################
+
+# For accessing attributes of functions.
+import inspect
+
+
 
 # For general array handling.
 import numpy as np
@@ -36,32 +54,8 @@ import skimage.measure
 
 
 
-# Import child modules and packages of current package.
-import empix.version
-
-
-
-############################
-## Authorship information ##
-############################
-
-__author__       = "Matthew Fitzpatrick"
-__copyright__    = "Copyright 2023"
-__credits__      = ["Matthew Fitzpatrick"]
-__version__      = empix.version.version
-__full_version__ = empix.version.full_version
-__maintainer__   = "Matthew Fitzpatrick"
-__email__        = "mrfitzpa@uvic.ca"
-__status__       = "Development"
-
-
-
-###################################
-## Useful background information ##
-###################################
-
-# See e.g. ``https://docs.python.org/3/reference/import.html#regular-packages``
-# for a brief discussion of ``__init__.py`` files.
+# Get version of current package.
+from fancytypes.version import __version__
 
 
 

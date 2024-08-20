@@ -3,6 +3,7 @@
 Examples
 ========
 
-You can find examples of using the ``empix`` library in a series of notebooks
-found in the directory ``<root>/examples`` of the repository, where ``<root>``
-is the root of the ``empix`` repository.
+You can find examples of using the ``empix`` library in the notebook located at
+``<root>/examples/basic_usage.ipynb``, where ``<root>`` is the root of the
+``empix`` repository. You can find the repository `here
+<https://github.com/mrfitzpa/empix>`_.
