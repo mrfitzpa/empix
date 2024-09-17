@@ -11,7 +11,7 @@
 microscopy data that are not available in
 [`hyperspy`](https://hyperspy.org/hyperspy-doc/current/index.html).
 
-Visit the `empix` [website](https://mrfitzpa.gitlab.io/empix) for a web version
+Visit the `empix` [website](https://mrfitzpa.github.io/empix) for a web version
 of the installation instructions, the reference guide, and the examples archive.
 
 <!--
