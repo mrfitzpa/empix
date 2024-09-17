@@ -4,14 +4,14 @@ Installation instructions
 =========================
 
 Installing empix
------------------------
+----------------
 
 For all installation scenarios, first open up the appropriate command line
 interface. On Unix-based systems, you would open a terminal. On Windows systems
 you would open an Anaconda Prompt as an administrator.
 
 Installing empix using pip
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The easiest way to install ``empix`` using ``pip`` is to run the following
 command::
@@ -51,7 +51,7 @@ where ``<selector>`` can be one of the following:
 * ``all``: to install all of the above optional dependencies.
 
 Installing empix using conda
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To install ``empix`` using the ``conda`` package manager, run the following
 command::
@@ -61,7 +61,7 @@ command::
 The above command will install the latest stable version of ``empix``.
 
 Uninstalling empix
--------------------------
+------------------
 
 If ``empix`` was installed using ``pip``, then to uninstall, run the following
 command from the root of the repository::

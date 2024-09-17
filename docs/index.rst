@@ -29,7 +29,7 @@ Contents
 
    Home <self>
    INSTALL
-   Reference <_autosummary/h5pywrappers>
+   Reference <_autosummary/empix>
    examples
    license
 

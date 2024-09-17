@@ -26,6 +26,12 @@ microscopy data that are not available in `hyperspy
 # For accessing attributes of functions.
 import inspect
 
+# For randomly selecting items in dictionaries.
+import random
+
+# For performing deep copies.
+import copy
+
 
 
 # For general array handling.
@@ -44,6 +50,7 @@ import fancytypes
 
 # For creating hyperspy signals.
 import hyperspy.signals
+import hyperspy.axes
 
 # For azimuthally integrating 2D hyperspy signals.
 import pyFAI.detectors
@@ -84,7 +91,118 @@ __all__ = ["abs_sq",
 
 
 
-def abs_sq(input_signal, title=None):
+def _check_and_convert_action_to_apply_to_input_signal(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    action_to_apply_to_input_signal = params[obj_name]
+
+    return action_to_apply_to_input_signal
+
+
+
+def _check_and_convert_input_signal(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    input_signal = params[obj_name]
+
+    action_to_apply_to_input_signal = params["action_to_apply_to_input_signal"]
+
+    if action_to_apply_to_input_signal == "abs_sq":
+        accepted_types = (hyperspy.signals.Signal1D,
+                          hyperspy.signals.Signal2D,
+                          hyperspy.signals.ComplexSignal1D,
+                          hyperspy.signals.ComplexSignal2D)
+    elif action_to_apply_to_input_signal == "cumulatively_integrate_1d":
+        accepted_types = (hyperspy.signals.Signal1D,
+                          hyperspy.signals.ComplexSignal1D)
+    else:
+        accepted_types = (hyperspy.signals.Signal2D,
+                          hyperspy.signals.ComplexSignal2D)
+    
+    kwargs = {"obj": input_signal,
+              "obj_name": obj_name,
+              "accepted_types": accepted_types}
+    czekitout.check.if_instance_of_any_accepted_types(**kwargs)
+
+    return input_signal
+
+
+
+def _check_and_convert_title(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    obj = params[obj_name]
+
+    accepted_types = (str, type(None))
+
+    if isinstance(obj, accepted_types[1]):
+        if "input_signal" in params:
+            param_name_subset = ("input_signal",
+                                 "action_to_apply_to_input_signal")
+            kwargs = {param_name: params[param_name]
+                      for param_name
+                      in param_name_subset}
+            title = _generate_title(**kwargs)
+        else:
+            title = obj
+    else:
+        try:
+            kwargs = {"obj": obj, "obj_name": obj_name}
+            title = czekitout.convert.to_str_from_str_like(**kwargs)
+        except:
+            kwargs["accepted_types"] = accepted_types
+            czekitout.check.if_instance_of_any_accepted_types(**kwargs)
+
+    return title
+
+
+
+def _generate_title(input_signal, action_to_apply_to_input_signal):
+    prefixes = {"abs_sq": "Modulus Squared of ",
+                "azimuthally_average": "Azimuthally Averaged ",
+                "azimuthally_integrate": "Azimuthally Integrated ",
+                "annularly_average": "Annularly Averaged ",
+                "annularly_integrate": "Annularly Integrated ",
+                "cumulatively_integrate_1d": "CDF(",
+                "crop": "Cropped ",
+                "downsample": "Downsampled ",
+                "resample": "Resampled "}
+    prefix = prefixes[action_to_apply_to_input_signal]
+
+    input_signal_title = input_signal.metadata.get_item("General.title",
+                                                        "signal")
+
+    suffix = ")" if (prefix[-1] == "(") else ""
+
+    title = prefix + input_signal_title + suffix
+
+    return title
+
+
+
+def _pre_serialize_title(title):
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
+    
+    return serializable_rep
+
+
+
+def _de_pre_serialize_title(serializable_rep):
+    title = serializable_rep
+
+    return title
+
+
+
+_default_title = None
+
+
+
+def abs_sq(input_signal, title=_default_title):
     r"""The modulus squared of a given input ``hyperspy`` signal.
 
     Parameters
@@ -103,137 +221,118 @@ def abs_sq(input_signal, title=None):
     -------
     output_signal : :class:`hyperspy._signals.signal1d.Signal1D` | :class:`hyperspy._signals.signal2d.Signal2D`
         The output ``hyperspy`` signal that stores the modulus squared of the
-        input signal ``input_signal``. Note that except for the title, the
-        metadata of the output signal is determined from the metadata of the
-        input signal.
+        input signal ``input_signal``. Note that the metadata of the input 
+        signal is copied over to the output signal, with the title being 
+        overwritten.
 
     """
-    _check_input_signal(input_signal)
-    title = _check_and_convert_title_v2(title, input_signal)
+    params = locals()
+    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    for param_name in params:
+        func_name = "_check_and_convert_" + param_name
+        func_alias = globals()[func_name]
+        params[param_name] = func_alias(params)
 
-    ComplexSignal = hyperspy.signals.ComplexSignal
-    if isinstance(input_signal, ComplexSignal):
-        output_signal = input_signal.amplitude
-        output_signal *= output_signal
-    else:
-        output_signal = input_signal * input_signal
-
-    output_signal.metadata.General.title = title
+    func_name = "_" + inspect.stack()[0][3]
+    func_alias = globals()[func_name]
+    kwargs = params
+    del kwargs["action_to_apply_to_input_signal"]
+    output_signal = func_alias(**kwargs)
 
     return output_signal
 
 
 
-def _check_input_signal(input_signal):
-    accepted_types = (hyperspy.signals.Signal1D,
-                      hyperspy.signals.Signal2D,
-                      hyperspy.signals.ComplexSignal1D,
-                      hyperspy.signals.ComplexSignal2D)
-    kwargs = {"obj": input_signal,
-              "obj_name": "input_signal",
-              "accepted_types": accepted_types}
-    czekitout.check.if_instance_of_any_accepted_types(**kwargs)
+def _abs_sq(input_signal, title):
+    if isinstance(input_signal, hyperspy.signals.ComplexSignal):
+        output_signal = input_signal.amplitude
+        output_signal *= output_signal
+    else:
+        output_signal = input_signal * input_signal
+        
+    output_signal.metadata.set_item("General.title", title)
 
-    return input_signal
-
+    return output_signal
 
 
-def _check_and_convert_title_v1(ctor_params):
-    title = ctor_params["title"]
+
+def _check_and_convert_center(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    obj = params[obj_name]
+
+    param_name = "action_to_apply_to_input_signal"
+    action_to_apply_to_input_signal = params.get(param_name, None)
+
+    param_name = "input_signal"
+    input_signal = params.get(param_name, None)
     
-    if title is not None:
+    if obj is not None:
         try:
-            title = czekitout.convert.to_str_from_str_like(title, "title")
+            kwargs = {"obj": obj, "obj_name": obj_name}
+            center = czekitout.convert.to_pair_of_floats(**kwargs)
         except:
-            raise TypeError(_check_and_convert_title_v1_err_msg_1)
+            err_msg = globals()[current_func_name+"_err_msg_1"]
+            raise TypeError(err_msg)
 
-    return title
-
-
-
-def _check_and_convert_title_v2(title, input_signal):
-    title = _check_and_convert_title_v1({"title": title})
-    if title is None:
-        title = _default_title(input_signal, "Modulus Squared of ", "")
-
-    return title
-
-
-
-def _default_title(input_signal, auto_prefix, auto_suffix):
-    input_signal_title = input_signal.metadata.General.title
-    title = auto_prefix + input_signal_title + auto_suffix
-
-    return title
-
-
-
-def _check_and_convert_center_v1(ctor_params):
-    center = ctor_params["center"]
+        if input_signal is not None:
+            if action_to_apply_to_input_signal != "crop":
+                h_range, v_range = _calc_h_and_v_ranges(signal=input_signal)
+                center_is_within_h_range = h_range[0] <= center[0] <= h_range[1]
+                center_is_within_v_range = v_range[0] <= center[1] <= v_range[1]
+                center_is_invalid = ((not center_is_within_h_range)
+                                     or (not center_is_within_v_range))
+                if center_is_invalid:
+                    err_msg = globals()[current_func_name+"_err_msg_2"]
+                    raise ValueError(err_msg)
+    else:
+        if input_signal is not None:
+            if action_to_apply_to_input_signal != "crop":
+                h_range, v_range = _calc_h_and_v_ranges(signal=input_signal)
+                center = ((h_range[0]+h_range[1])/2, (v_range[0]+v_range[1])/2)
+            else:
+                N_v, N_h = input_signal.data.shape[-2:]
     
-    if center is not None:
-        try:
-            center = czekitout.convert.to_pair_of_floats(center, "center")
-        except:
-            raise TypeError(_check_and_convert_center_v1_err_msg_1)
+                h_scale = input_signal.axes_manager[-2].scale
+                v_scale = input_signal.axes_manager[-1].scale
+
+                h_offset = input_signal.axes_manager[-2].offset
+                v_offset = input_signal.axes_manager[-1].offset
+
+                center = (h_offset + h_scale*((N_h-1)//2),
+                          v_offset + v_scale*((N_v-1)//2))
+        else:
+            center = obj
 
     return center
 
 
 
-def _check_and_convert_radial_range_v1(ctor_params):
-    radial_range = ctor_params["radial_range"]
-    
-    if radial_range is not None:
-        try:
-            radial_range = czekitout.convert.to_pair_of_floats(radial_range,
-                                                               "radial_range")
-        except:
-            raise TypeError(_check_and_convert_radial_range_v1_err_msg_1)
+def _calc_h_and_v_ranges(signal):
+    h_scale = signal.axes_manager[-2].scale
+    v_scale = signal.axes_manager[-1].scale
 
-        if not (0 <= radial_range[0] <= radial_range[1]):
-            raise ValueError(_check_and_convert_radial_range_v1_err_msg_1)
+    N_v, N_h = signal.data.shape[-2:]
 
-    return radial_range
+    h_offset = signal.axes_manager[-2].offset
+    v_offset = signal.axes_manager[-1].offset
 
+    h_min = min(h_offset, h_offset + (N_h-1)*h_scale)
+    h_max = max(h_offset, h_offset + (N_h-1)*h_scale)
+    h_range = (h_min, h_max)
 
+    v_min = min(v_offset, v_offset + (N_v-1)*v_scale)
+    v_max = max(v_offset, v_offset + (N_v-1)*v_scale)
+    v_range = (v_min, v_max)
 
-def _check_and_convert_num_bins_v1(ctor_params):
-    num_bins = ctor_params["num_bins"]
-
-    if num_bins is not None:
-        try:
-            num_bins = czekitout.convert.to_positive_int(num_bins, "num_bins")
-        except:
-            raise TypeError(_check_and_convert_num_bins_v1_err_msg_1)
-
-    return num_bins
+    return h_range, v_range
 
 
 
 def _pre_serialize_center(center):
-    serializable_rep = center
-    
-    return serializable_rep
-
-
-
-def _pre_serialize_radial_range(radial_range):
-    serializable_rep = radial_range
-    
-    return serializable_rep
-
-
-
-def _pre_serialize_num_bins(num_bins):
-    serializable_rep = num_bins
-    
-    return serializable_rep
-
-
-
-def _pre_serialize_title(title):
-    serializable_rep = title
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
 
@@ -246,10 +345,98 @@ def _de_pre_serialize_center(serializable_rep):
 
 
 
+def _check_and_convert_radial_range(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    obj = params[obj_name]
+
+    param_name = "input_signal"
+    input_signal = params.get(param_name, None)
+    
+    if obj is not None:
+        try:
+            func_alias = czekitout.convert.to_pair_of_nonnegative_floats
+            kwargs = {"obj": obj, "obj_name": obj_name}
+            radial_range = func_alias(**kwargs)
+        except:
+            err_msg = globals()[current_func_name+"_err_msg_1"]
+            raise TypeError(err_msg)
+
+        if radial_range[0] >= radial_range[1]:
+            err_msg = globals()[current_func_name+"_err_msg_1"]
+            raise ValueError(err_msg)
+    else:
+        if input_signal is not None:
+            center = _check_and_convert_center(params)
+            h_range, v_range = _calc_h_and_v_ranges(signal=input_signal)
+            temp_1 = min(abs(center[0]-h_range[0]), abs(center[0]-h_range[1]))
+            temp_2 = min(abs(center[1]-v_range[0]), abs(center[1]-v_range[1]))
+            radial_range = (0, min(temp_1, temp_2))
+        else:
+            radial_range = obj
+
+    return radial_range
+
+
+
+def _pre_serialize_radial_range(radial_range):
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
+    
+    return serializable_rep
+
+
+
 def _de_pre_serialize_radial_range(serializable_rep):
     radial_range = serializable_rep
 
     return radial_range
+
+
+
+def _check_and_convert_num_bins(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    obj = params[obj_name]
+
+    param_name = "input_signal"
+    input_signal = params.get(param_name, None)
+    
+    if obj is not None:
+        try:
+            kwargs = {"obj": obj, "obj_name": obj_name}
+            num_bins = czekitout.convert.to_positive_int(**kwargs)
+        except:
+            err_msg = globals()[current_func_name+"_err_msg_1"]
+            raise TypeError(err_msg)
+    else:
+        if input_signal is not None:
+            num_bins = (input_signal.data.shape[-1]
+                        if _signal_is_1d(signal=input_signal)
+                        else min(input_signal.data.shape[-2:]))
+        else:
+            num_bins = obj
+
+    return num_bins
+
+
+
+def _signal_is_1d(signal):
+    signal_1d_types = (hyperspy.signals.Signal1D,
+                       hyperspy.signals.ComplexSignal1D)
+    result = isinstance(signal, signal_1d_types)
+
+    return result
+
+
+
+def _pre_serialize_num_bins(num_bins):
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
+    
+    return serializable_rep
 
 
 
@@ -260,19 +447,19 @@ def _de_pre_serialize_num_bins(serializable_rep):
 
 
 
-def _de_pre_serialize_title(serializable_rep):
-    title = serializable_rep
+_default_center = None
+_default_radial_range = None
+_default_num_bins = None
+_default_skip_validation_and_conversion = False
 
-    return title
 
 
-
-class OptionalAzimuthalAveragingParams(
-        fancytypes.PreSerializableAndUpdatable):
+_cls_alias = fancytypes.PreSerializableAndUpdatable
+class OptionalAzimuthalAveragingParams(_cls_alias):
     r"""The set of optional parameters for the function
     :func:`empix.azimuthally_average`.
 
-    The Python function :func:`empix.azimuthally_integrate` averages
+    The Python function :func:`empix.azimuthally_average` averages
     azimuthally a given input 2D ``hyperspy`` signal. The Python function
     assumes that the input 2D ``hyperspy`` signal samples from a mathematical
     function :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` which is piecewise
@@ -286,15 +473,15 @@ class OptionalAzimuthalAveragingParams(
     :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` as
 
     .. math ::
-	&\overline{S}_{\mathbf{m}}\left(\left.R_{xy}=r_{xy}\right|
-        0\le U_{\phi}<2\pi;c_{x},c_{y}\right)\\&\quad=\frac{1}{2\pi r_{xy}}
-        \int_{0}^{2\pi}du_{\phi}\,u_{xy}
-        F_{\mathbf{m}}\left(c_{x}+r_{xy}\cos\left(u_{\phi}\right),
-        c_{y}+r_{xy}\sin\left(u_{\phi}\right)\right),
+	&\overline{S}_{\mathbf{m}}\left(U_{r}=
+        u_{r}\left|0\le U_{\phi}<2\pi;c_{x},c_{y}\right.\right)
+        \\&\quad=\frac{1}{2\pi}\int_{0}^{2\pi}du_{\phi}\,
+        F_{\mathbf{m}}\left(c_{x}+u_{r}\cos\left(u_{\phi}\right),
+        c_{y}+u_{r}\sin\left(u_{\phi}\right)\right),
         :label: azimuthal_average__1
 
     where :math:`\left(c_{x},c_{y}\right)` is the reference point from which the
-    radial distance :math:`r_{xy}` is defined for the azimuthal averaging.
+    radial distance :math:`u_r` is defined for the azimuthal averaging.
 
     Parameters
     ----------
@@ -317,7 +504,7 @@ class OptionalAzimuthalAveragingParams(
         the radial range respectively, in the same units of the horizontal and
         vertical axes respectively of the signal space of the input signal. Note
         that in this case ``radial_range`` must satisfy
-        ``0<=radial_range[0]<=radial_range[1]``. Moreover, the function
+        ``0<=radial_range[0]<radial_range[1]``. Moreover, the function
         represented by the input signal is assumed to be equal to zero
         everywhere outside of the signal space boundaries of said input signal.
     num_bins : `int` | `None`, optional
@@ -334,74 +521,174 @@ class OptionalAzimuthalAveragingParams(
         input ``hyperspy`` signal.  Otherwise, if ``title`` is a `str`, then the
         ``output_signal.metadata.General.title`` is set to the value of 
         ``title``.
+    skip_validation_and_conversion : `bool`, optional
+        Let ``validation_and_conversion_funcs`` and ``core_attrs`` denote the
+        attributes :attr:`~fancytypes.Checkable.validation_and_conversion_funcs`
+        and :attr:`~fancytypes.Checkable.core_attrs` respectively, both of which
+        being `dict` objects.
 
-    Attributes
-    ----------
-    core_attrs : `dict`, read-only
-        A `dict` representation of the core attributes: each `dict` key is a
-        `str` representing the name of a core attribute, and the corresponding
-        `dict` value is the object to which said core attribute is set. The core
-        attributes are the same as the construction parameters, except that 
-        their values might have been updated since construction.
+        Let ``params_to_be_mapped_to_core_attrs`` denote the `dict`
+        representation of the constructor parameters excluding the parameter
+        ``skip_validation_and_conversion``, where each `dict` key ``key`` is a
+        different constructor parameter name, excluding the name
+        ``"skip_validation_and_conversion"``, and
+        ``params_to_be_mapped_to_core_attrs[key]`` would yield the value of the
+        constructor parameter with the name given by ``key``.
+
+        If ``skip_validation_and_conversion`` is set to ``False``, then for each
+        key ``key`` in ``params_to_be_mapped_to_core_attrs``,
+        ``core_attrs[key]`` is set to ``validation_and_conversion_funcs[key]
+        (params_to_be_mapped_to_core_attrs)``.
+
+        Otherwise, if ``skip_validation_and_conversion`` is set to ``True``,
+        then ``core_attrs`` is set to
+        ``params_to_be_mapped_to_core_attrs.copy()``. This option is desired
+        primarily when the user wants to avoid potentially expensive deep copies
+        and/or conversions of the `dict` values of
+        ``params_to_be_mapped_to_core_attrs``, as it is guaranteed that no
+        copies or conversions are made in this case.
 
     """
-    _validation_and_conversion_funcs = \
-        {"center": _check_and_convert_center_v1,
-         "radial_range": _check_and_convert_radial_range_v1,
-         "num_bins": _check_and_convert_num_bins_v1,
-         "title": _check_and_convert_title_v1}
+    ctor_param_names = ("center", "radial_range", "num_bins", "title")
+    kwargs = {"namespace_as_dict": globals(),
+              "ctor_param_names": ctor_param_names}
+    
+    _validation_and_conversion_funcs_ = \
+        fancytypes.return_validation_and_conversion_funcs(**kwargs)
+    _pre_serialization_funcs_ = \
+        fancytypes.return_pre_serialization_funcs(**kwargs)
+    _de_pre_serialization_funcs_ = \
+        fancytypes.return_de_pre_serialization_funcs(**kwargs)
 
-    _pre_serialization_funcs = \
-        {"center": _pre_serialize_center,
-         "radial_range": _pre_serialize_radial_range,
-         "num_bins": _pre_serialize_num_bins,
-         "title": _pre_serialize_title}
+    del ctor_param_names, kwargs
 
-    _de_pre_serialization_funcs = \
-        {"center": _de_pre_serialize_center,
-         "radial_range": _de_pre_serialize_radial_range,
-         "num_bins": _de_pre_serialize_num_bins,
-         "title": _de_pre_serialize_title}
+    
 
     def __init__(self,
-                 center=None,
-                 radial_range=None,
-                 num_bins=None,
-                 title=None):
-        ctor_params = {"center": center,
-                       "radial_range": radial_range,
-                       "num_bins": num_bins,
-                       "title": title}
-        fancytypes.PreSerializableAndUpdatable.__init__(self, ctor_params)
+                 center=\
+                 _default_center,
+                 radial_range=\
+                 _default_radial_range,
+                 num_bins=\
+                 _default_num_bins,
+                 title=\
+                 _default_title,
+                 skip_validation_and_conversion=\
+                 _default_skip_validation_and_conversion):
+        ctor_params = {key: val
+                       for key, val in locals().items()
+                       if (key not in ("self", "__class__"))}
+        kwargs = ctor_params
+        kwargs["skip_cls_tests"] = True
+        fancytypes.PreSerializableAndUpdatable.__init__(self, **kwargs)
 
         return None
 
 
 
-def azimuthally_average(input_signal, optional_params=None):
+    @classmethod
+    def get_validation_and_conversion_funcs(cls):
+        validation_and_conversion_funcs = \
+            cls._validation_and_conversion_funcs_.copy()
+
+        return validation_and_conversion_funcs
+
+
+    
+    @classmethod
+    def get_pre_serialization_funcs(cls):
+        pre_serialization_funcs = \
+            cls._pre_serialization_funcs_.copy()
+
+        return pre_serialization_funcs
+
+
+    
+    @classmethod
+    def get_de_pre_serialization_funcs(cls):
+        de_pre_serialization_funcs = \
+            cls._de_pre_serialization_funcs_.copy()
+
+        return de_pre_serialization_funcs
+
+
+
+def _check_and_convert_optional_params(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    obj = params[obj_name]
+
+    param_name = "action_to_apply_to_input_signal"
+    action_to_apply_to_input_signal = params.get(param_name, None)
+
+    optional_params_cls_set = \
+        {"azimuthally_average": OptionalAzimuthalAveragingParams,
+         "azimuthally_integrate": OptionalAzimuthalIntegrationParams,
+         "annularly_average": OptionalAnnularAveragingParams,
+         "annularly_integrate": OptionalAnnularIntegrationParams,
+         "cumulatively_integrate_1d": OptionalCumulative1dIntegrationParams,
+         "crop": OptionalCroppingParams,
+         "downsample": OptionalDownsamplingParams,
+         "resample": OptionalResamplingParams}
+    optional_params_cls = \
+        optional_params_cls_set[action_to_apply_to_input_signal]
+    
+    optional_params = optional_params_cls() if (obj is None) else obj
+
+    kwargs = {"obj": optional_params,
+              "obj_name": obj_name,
+              "accepted_types": (optional_params_cls, type(None))}
+    czekitout.check.if_instance_of_any_accepted_types(**kwargs)
+
+    optional_params_core_attrs = \
+        optional_params.get_core_attrs(deep_copy=False)
+    params = \
+        {"input_signal": _check_and_convert_input_signal(params),
+         "action_to_apply_to_input_signal": action_to_apply_to_input_signal,
+         **optional_params_core_attrs}
+    
+    for param_name in optional_params_core_attrs:
+        func_name = "_check_and_convert_" + param_name
+        func_alias = globals()[func_name]
+        optional_params_core_attrs[param_name] = func_alias(params)
+
+    kwargs = {"skip_validation_and_conversion": True,
+              **optional_params_core_attrs}
+    optional_params = optional_params_cls(**kwargs)
+
+    return optional_params
+
+
+
+_default_optional_params = None
+
+
+
+def azimuthally_average(input_signal, optional_params=_default_optional_params):
     r"""Average azimuthally a given input 2D ``hyperspy`` signal.
 
-    This current Python function assumes that the input 2D ``hyperspy`` signal
-    samples from a mathematical function
-    :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` which is piecewise continuous
-    in :math:`u_{x}` and :math:`u_{y}`, where :math:`u_{x}` and :math:`u_{y}`
-    are the horizontal and vertical coordinates in the signal space of the input
-    signal, and :math:`\mathbf{m}` is a vector of integers representing the
-    navigation indices of the input signal. The Python function approximates the
-    azimuthal average of :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` given
-    the input signal. We define the azimuthal average of
+    This Python function assumes that the input 2D ``hyperspy`` signal samples
+    from a mathematical function :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)`
+    which is piecewise continuous in :math:`u_{x}` and :math:`u_{y}`, where
+    :math:`u_{x}` and :math:`u_{y}` are the horizontal and vertical coordinates
+    in the signal space of the input signal, and :math:`\mathbf{m}` is a vector
+    of integers representing the navigation indices of the input signal. The
+    Python function approximates the azimuthal average of
+    :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` given the input signal. We
+    define the azimuthal average of
     :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` as
 
     .. math ::
-	&\overline{S}_{\mathbf{m}}\left(\left.R_{xy}=r_{xy}\right|
-        0\le U_{\phi}<2\pi;c_{x},c_{y}\right)\\&\quad=\frac{1}{2\pi r_{xy}}
-        \int_{0}^{2\pi}du_{\phi}\,u_{xy}
-        F_{\mathbf{m}}\left(c_{x}+r_{xy}\cos\left(u_{\phi}\right),
-        c_{y}+r_{xy}\sin\left(u_{\phi}\right)\right),
+	&\overline{S}_{\mathbf{m}}\left(U_{r}=
+        u_{r}\left|0\le U_{\phi}<2\pi;c_{x},c_{y}\right.\right)
+        \\&\quad=\frac{1}{2\pi}\int_{0}^{2\pi}du_{\phi}\,
+        F_{\mathbf{m}}\left(c_{x}+u_{r}\cos\left(u_{\phi}\right),
+        c_{y}+u_{r}\sin\left(u_{\phi}\right)\right),
         :label: azimuthal_average__2
 
     where :math:`\left(c_{x},c_{y}\right)` is the reference point from which the
-    radial distance :math:`r_{xy}` is defined for the azimuthal averaging.
+    radial distance :math:`u_r` is defined for the azimuthal averaging.
 
     Parameters
     ----------
@@ -418,141 +705,59 @@ def azimuthally_average(input_signal, optional_params=None):
     -------
     output_signal : :class:`hyperspy._signals.signal1d.Signal1D` | :class:`hyperspy._signals.complex_signal1d.ComplexSignal1D`
         The output ``hyperspy`` signal that samples the azimuthal average of the
-        input signal ``input_signal``. Note that except for the title, the
-        metadata of the output signal is determined from the metadata of the
-        input signal.
+        input signal ``input_signal``. Note that the metadata of the input 
+        signal is copied over to the output signal, with the title being 
+        overwritten.
 
     """
-    _check_2D_input_signal(input_signal)
-    center, radial_range, num_bins, title = \
-        _check_and_convert_optional_params_v1(optional_params, input_signal)
-    if title is None:
-        title = _default_title(input_signal, "Azimuthally Averaged ", "")
-    
-    azimuthal_integrator = _construct_azimuthal_integrator(input_signal, center)
+    params = locals()
+    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    for param_name in params:
+        func_name = "_check_and_convert_" + param_name
+        func_alias = globals()[func_name]
+        params[param_name] = func_alias(params)
 
-    bin_coords, output_data = \
-        _apply_azimuthal_integrator_to_input_signal(azimuthal_integrator,
-                                                    input_signal,
-                                                    num_bins,
-                                                    radial_range)
-    
-    metadata = {"General": {"title": title}, "Signal": dict()}
-    if np.isrealobj(output_data):
-        output_signal = hyperspy.signals.Signal1D(data=output_data,
-                                                  metadata=metadata)
-    else:
-        output_signal = hyperspy.signals.ComplexSignal1D(data=output_data,
-                                                         metadata=metadata)
-    _update_output_signal_axes_v1(output_signal, bin_coords, input_signal)
+    func_name = "_" + inspect.stack()[0][3]
+    func_alias = globals()[func_name]
+    kwargs = params
+    del kwargs["action_to_apply_to_input_signal"]
+    output_signal = func_alias(**kwargs)
 
     return output_signal
 
 
 
-def _check_2D_input_signal(input_signal):
-    accepted_types = (hyperspy.signals.Signal2D,
-                      hyperspy.signals.ComplexSignal2D)
-    kwargs = {"obj": input_signal,
-              "obj_name": "input_signal",
-              "accepted_types": accepted_types}
-    czekitout.check.if_instance_of_any_accepted_types(**kwargs)
-
-    return input_signal
-
-
-
-def _check_and_convert_optional_params_v1(optional_params, input_signal):
-    if optional_params is None:
-        optional_params = OptionalAzimuthalAveragingParams()
-    if not isinstance(optional_params, OptionalAzimuthalAveragingParams):
-        raise TypeError(_check_and_convert_optional_params_v1_err_msg_1)
-
-    center = optional_params.core_attrs["center"]
-    center = _check_and_convert_center_v2(center, input_signal)
-
-    radial_range = optional_params.core_attrs["radial_range"]
-    radial_range = _check_and_convert_radial_range_v2(radial_range,
-                                                      input_signal,
-                                                      center)
-
-    num_bins = optional_params.core_attrs["num_bins"]
-    num_bins = _check_and_convert_num_bins_v2(num_bins, input_signal)
-
-    title = optional_params.core_attrs["title"]
-
-    return center, radial_range, num_bins, title
-
-
-
-def _check_and_convert_center_v2(center, signal):
-    h_range, v_range = _h_and_v_ranges(signal)
+def _azimuthally_average(input_signal, optional_params):
+    optional_params_core_attrs = optional_params.get_core_attrs(deep_copy=False)
+    center = optional_params_core_attrs["center"]
+    radial_range = optional_params_core_attrs["radial_range"]
+    num_bins = optional_params_core_attrs["num_bins"]
+    title = optional_params_core_attrs["title"]
     
-    if center is not None:
-        if not ((h_range[0] < center[0] < h_range[1])
-                and (v_range[0] < center[1] < v_range[1])):
-            raise ValueError(_check_and_convert_center_v2_err_msg_2)
+    azimuthal_integrator = _construct_azimuthal_integrator(input_signal, center)
+
+    func_alias = _apply_azimuthal_integrator_to_input_signal
+    kwargs = {"azimuthal_integrator": azimuthal_integrator,
+              "input_signal": input_signal,
+              "num_bins": num_bins,
+              "radial_range": radial_range}
+    bin_coords, output_signal_data = func_alias(**kwargs)
+    
+    kwargs = {"data": output_signal_data,
+              "metadata": input_signal.metadata.as_dictionary()}
+    if np.isrealobj(output_signal_data):
+        output_signal = hyperspy.signals.Signal1D(**kwargs)
     else:
-        center = ((h_range[0]+h_range[1])/2, (v_range[0]+v_range[1])/2)
+        output_signal = hyperspy.signals.ComplexSignal1D(**kwargs)
+    output_signal.metadata.set_item("General.title", title)
 
-    center = (center[0], center[1])
+    kwargs = {"input_signal": input_signal,
+              "optional_params": optional_params,
+              "bin_coords": bin_coords,
+              "output_signal": output_signal}
+    _update_output_signal_axes(**kwargs)
 
-    return center
-
-
-def _h_and_v_ranges(signal):
-    h_scale = signal.axes_manager[-2].scale
-    v_scale = signal.axes_manager[-1].scale
-
-    n_v, n_h = signal.data.shape[-2:]
-
-    h_offset = signal.axes_manager[-2].offset
-    v_offset = signal.axes_manager[-1].offset
-
-    h_min = min(h_offset, h_offset + n_h*h_scale)
-    h_max = max(h_offset, h_offset + n_h*h_scale)
-    h_range = (h_min, h_max)
-
-    v_min = min(v_offset, v_offset + n_v*v_scale)
-    v_max = max(v_offset, v_offset + n_v*v_scale)
-    v_range = (v_min, v_max)
-
-    return h_range, v_range
-
-
-
-def _check_and_convert_radial_range_v2(radial_range, signal, center):
-    if radial_range is None:
-        h_range, v_range = _h_and_v_ranges(signal)
-        temp_1 = min(abs(center[0] - h_range[0]), abs(center[0] - h_range[1]))
-        temp_2 = min(abs(center[1] - v_range[0]), abs(center[1] - v_range[1]))
-        radial_range = (0, min(temp_1, temp_2))
-
-    # Need to multiply range by 1000 because of the units used in pyFAI's
-    # azimuthal integrator.
-    radial_range = (radial_range[0]*1000, radial_range[1]*1000)
-
-    return radial_range
-
-
-
-def _check_and_convert_num_bins_v2(num_bins, signal):
-    if num_bins is None:
-        if _is_1d_signal(signal):
-            num_bins = signal.data.shape[-1]
-        else:
-            num_bins = min(signal.data.shape[-2:])
-
-    return num_bins
-
-
-
-def _is_1d_signal(signal):
-    signal_1d_types = (hyperspy.signals.Signal1D,
-                       hyperspy.signals.ComplexSignal1D)
-    result = isinstance(signal, signal_1d_types)
-
-    return result
+    return output_signal
 
 
 
@@ -565,9 +770,9 @@ def _construct_azimuthal_integrator(signal, center):
     # ``pone_1`` and ``poni_2`` are the vertical and horizontal displacements
     # of the reference point, from which to perform the azimuthal integration,
     # from the top left corner of the input signal.
-    h_range, v_range = _h_and_v_ranges(signal)
-    poni_1 = center[1] - v_range[0] if v_scale > 0 else v_range[1] - center[1]
-    poni_2 = center[0] - h_range[0] if h_scale > 0 else h_range[1] - center[0]
+    h_range, v_range = _calc_h_and_v_ranges(signal)
+    poni_1 = center[1]-v_range[0] if (v_scale > 0) else v_range[1]-center[1]
+    poni_2 = center[0]-h_range[0] if (h_scale > 0) else h_range[1]-center[0]
 
     # We require ``L >> max(v_pixel_size, h_pixel_size)``.
     h_pixel_size = abs(h_scale)
@@ -575,10 +780,11 @@ def _construct_azimuthal_integrator(signal, center):
     L = 10000 * max(v_pixel_size, h_pixel_size)
 
     AzimuthalIntegrator = pyFAI.azimuthalIntegrator.AzimuthalIntegrator
-    azimuthal_integrator = AzimuthalIntegrator(dist=L,
-                                               poni1=poni_1, 
-                                               poni2=poni_2, 
-                                               detector=detector)
+    kwargs = {"dist": L,
+              "poni1": poni_1,
+              "poni2": poni_2,
+              "detector": detector}
+    azimuthal_integrator = AzimuthalIntegrator(**kwargs)
 
     return azimuthal_integrator
     
@@ -587,8 +793,9 @@ def _construct_azimuthal_integrator(signal, center):
 def _construct_pyfai_detector(signal):
     h_pixel_size = abs(signal.axes_manager[-2].scale)
     v_pixel_size = abs(signal.axes_manager[-1].scale)
-    detector = pyFAI.detectors.Detector(pixel1=v_pixel_size,
-                                        pixel2=h_pixel_size)
+
+    kwargs = {"pixel1": v_pixel_size, "pixel2": h_pixel_size}
+    detector = pyFAI.detectors.Detector(**kwargs)
 
     return detector
 
@@ -599,83 +806,301 @@ def _apply_azimuthal_integrator_to_input_signal(azimuthal_integrator,
                                                 num_bins,
                                                 radial_range):
     navigation_dims = input_signal.data.shape[:-2]
-    output_data_shape = list(navigation_dims) + [num_bins]
-    output_data = np.zeros(output_data_shape, dtype=input_signal.data.dtype)
+    output_signal_data_shape = navigation_dims + (num_bins,)
+    output_signal_data = np.zeros(output_signal_data_shape,
+                                  dtype=input_signal.data.dtype)
 
     num_patterns = int(np.prod(navigation_dims))
     for pattern_idx in range(num_patterns):
         navigation_indices = np.unravel_index(pattern_idx, navigation_dims)
-        input_datasubset = input_signal.data[navigation_indices]
-            
+        input_signal_datasubset = input_signal.data[navigation_indices]
+
+        func_alias = _apply_azimuthal_integrator_to_input_signal_datasubset
         kwargs = {"azimuthal_integrator": azimuthal_integrator,
-                  "input_datasubset": input_datasubset,
+                  "input_signal_datasubset": input_signal_datasubset,
                   "num_bins": num_bins,
                   "radial_range": radial_range}
-        bin_coords, output_datasubset = \
-            _apply_azimuthal_integrator_to_input_datasubset(**kwargs)
-        output_data[navigation_indices] = output_datasubset
+        bin_coords, output_signal_datasubset = func_alias(**kwargs)
+        output_signal_data[navigation_indices] = output_signal_datasubset
     
     bin_coords /= 1000  # Because of the artificial "r_mm" units.
 
-    return bin_coords, output_data
+    return bin_coords, output_signal_data
 
 
 
-def _apply_azimuthal_integrator_to_input_datasubset(azimuthal_integrator,
-                                                    input_datasubset,
-                                                    num_bins,
-                                                    radial_range):
-    if np.isrealobj(input_datasubset):
-        bin_coords, output_datasubset = \
-            azimuthal_integrator.integrate1d(input_datasubset, 
-                                             npt=num_bins,
-                                             radial_range=radial_range,
-                                             unit="r_mm")
+def _apply_azimuthal_integrator_to_input_signal_datasubset(
+        azimuthal_integrator,
+        input_signal_datasubset,
+        num_bins,
+        radial_range):
+    # Need to multiply range by 1000 because of the units used in pyFAI's
+    # azimuthal integrator.
+    method_alias = azimuthal_integrator.integrate1d
+    kwargs = {"npt": num_bins,
+              "radial_range": (radial_range[0]*1000, radial_range[1]*1000),
+              "unit": "r_mm"}
+
+    if np.isrealobj(input_signal_datasubset):
+        kwargs["data"] = input_signal_datasubset
+        bin_coords, output_signal_datasubset = method_alias(**kwargs)
     else:
-        bin_coords, real_output_datasubset = \
-            azimuthal_integrator.integrate1d(input_datasubset.real, 
-                                             npt=num_bins,
-                                             radial_range=radial_range,
-                                             unit="r_mm")
-        bin_coords, imag_output_datasubset = \
-            azimuthal_integrator.integrate1d(input_datasubset.imag, 
-                                             npt=num_bins,
-                                             radial_range=radial_range,
-                                             unit="r_mm")
+        kwargs["data"] = input_signal_datasubset.real
+        bin_coords, real_output_signal_datasubset = method_alias(**kwargs)
 
-        output_datasubset = real_output_datasubset + 1j*imag_output_datasubset
+        kwargs["data"] = input_signal_datasubset.imag
+        bin_coords, imag_output_signal_datasubset = method_alias(**kwargs)
 
-    return bin_coords, output_datasubset
+        output_signal_datasubset = (real_output_signal_datasubset
+                                    + 1j*imag_output_signal_datasubset)
+
+    return bin_coords, output_signal_datasubset
 
 
 
-def _update_output_signal_axes_v1(output_signal, bin_coords, input_signal):
-    if _is_1d_signal(output_signal):
-        navigation_dims = input_signal.data.shape[:-1]
-        axis_name = {"Å": "$r$", "1/Å": "$k$"}
-    else:
-        navigation_dims = input_signal.data.shape[:-2]
-        axis_name = {"Å": "$r_{xy}$", "1/Å": "$k_{xy}$"}
+def _update_output_signal_axes(input_signal,
+                               optional_params,
+                               bin_coords,
+                               output_signal):
+    kwargs = {"input_signal": input_signal,
+              "optional_params": optional_params}
+    output_signal_axes_names = _calc_output_signal_axes_names(**kwargs)
+    output_signal_axes_units = _calc_output_signal_axes_units(**kwargs)
+
+    kwargs["bin_coords"] = bin_coords
+    output_signal_axes_offsets = _calc_output_signal_axes_offsets(**kwargs)
+    output_signal_axes_scales = _calc_output_signal_axes_scales(**kwargs)
+
+    num_axes = len(output_signal.data.shape)
+
+    output_signal_axes_sizes = tuple(output_signal.axes_manager[idx].size
+                                     for idx
+                                     in range(num_axes))
         
-    for idx in range(len(navigation_dims)):
-        axis = input_signal.axes_manager[idx]
-        output_signal.axes_manager[idx].update_from(axis)
-        output_signal.axes_manager[idx].name = axis.name
+    for axis_idx in range(num_axes):
+        kwargs = {"size": output_signal_axes_sizes[axis_idx],
+                  "scale": output_signal_axes_scales[axis_idx],
+                  "offset": output_signal_axes_offsets[axis_idx],
+                  "units": output_signal_axes_units[axis_idx]}
+        new_output_signal_axis = hyperspy.axes.UniformDataAxis(**kwargs)
 
-    units = input_signal.axes_manager[-1].units
-    axis = hyperspy.axes.UniformDataAxis(size=len(bin_coords),
-                                         scale=bin_coords[1]-bin_coords[0],
-                                         offset=bin_coords[0],
-                                         units=units)
-    output_signal.axes_manager[-1].update_from(axis)
-    output_signal.axes_manager[-1].name = axis_name.get(units, "")
+        name = output_signal_axes_names[axis_idx]
+        units = output_signal_axes_units[axis_idx]
+        
+        output_signal.axes_manager[axis_idx].update_from(new_output_signal_axis)
+        output_signal.axes_manager[axis_idx].name = name
+        output_signal.axes_manager[axis_idx].units = units
 
     return None
 
 
 
-class OptionalAzimuthalIntegrationParams(
-        fancytypes.PreSerializableAndUpdatable):
+def _calc_output_signal_axes_names(input_signal, optional_params):
+    num_axes = len(input_signal.data.shape)
+
+    optional_params_core_attrs = optional_params.get_core_attrs(deep_copy=False)
+
+    input_signal_axes_names = tuple(input_signal.axes_manager[idx].name
+                                    for idx
+                                    in range(num_axes))
+    input_signal_axes_units = tuple(input_signal.axes_manager[idx].units
+                                    for idx
+                                    in range(num_axes))
+
+    if "num_bins" in optional_params_core_attrs:
+        if "limits" in optional_params_core_attrs:
+            unit_to_axis_name_map = {"Å": "$r$", "1/Å": "$k$"}
+
+            args = (input_signal_axes_units[-1], "")
+            output_signal_axis_name = unit_to_axis_name_map.get(*args)
+
+            output_signal_axes_names = (input_signal_axes_names[:-1]
+                                        + (output_signal_axis_name,))
+        else:
+            unit_to_axis_name_map = {"Å": "$r_{xy}$", "1/Å": "$k_{xy}$"}
+            
+            args = (input_signal_axes_units[-1], "")
+            output_signal_axis_name = unit_to_axis_name_map.get(*args)
+            
+            output_signal_axes_names = (input_signal_axes_names[:-2]
+                                        + (output_signal_axis_name,))
+    else:
+        output_signal_axes_names = input_signal_axes_names
+
+    return output_signal_axes_names
+
+
+
+def _calc_output_signal_axes_units(input_signal, optional_params):
+    num_axes = len(input_signal.data.shape)
+
+    optional_params_core_attrs = optional_params.get_core_attrs(deep_copy=False)
+
+    input_signal_axes_units = tuple(input_signal.axes_manager[idx].units
+                                    for idx
+                                    in range(num_axes))
+
+    if "num_bins" in optional_params_core_attrs:
+        if "limits" in optional_params_core_attrs:
+            output_signal_axes_units = input_signal_axes_units
+        else:
+            output_signal_axes_units = (input_signal_axes_units[:-2]
+                                        + (input_signal_axes_units[-1],))
+    else:
+        output_signal_axes_units = input_signal_axes_units
+
+    return output_signal_axes_units
+
+
+
+def _calc_output_signal_axes_offsets(input_signal, optional_params, bin_coords):
+    num_axes = len(input_signal.data.shape)
+
+    optional_params_core_attrs = optional_params.get_core_attrs(deep_copy=False)
+
+    input_signal_axes_offsets = tuple(input_signal.axes_manager[idx].offset
+                                      for idx
+                                      in range(num_axes))
+
+    if "pad_mode" in optional_params_core_attrs:
+        func_alias = _calc_output_signal_axes_offsets_resulting_from_crop
+        kwargs = {"input_signal": input_signal,
+                  "optional_params": optional_params}
+        output_signal_axes_offsets = func_alias(**kwargs)
+    elif "num_bins" in optional_params_core_attrs:
+        if "limits" in optional_params_core_attrs:
+            output_signal_axes_offsets = (input_signal_axes_offsets[:-1]
+                                          + (bin_coords[0],))
+        else:
+            output_signal_axes_offsets = (input_signal_axes_offsets[:-2]
+                                          + (bin_coords[0],))
+    else:
+        input_signal_axes_scales = tuple(input_signal.axes_manager[idx].scale
+                                         for idx
+                                         in range(num_axes))
+
+        output_signal_axes_offsets = list(input_signal_axes_offsets)
+
+        if "block_dims" in optional_params_core_attrs:
+            block_dims = optional_params_core_attrs["block_dims"]
+            
+            for idx in (-2, -1):
+                output_signal_axes_offsets[idx] += \
+                    0.5*(block_dims[idx]-1)*input_signal_axes_scales[idx]
+                
+        else:
+            for idx in (-2, -1):
+                output_signal_axes_offsets[idx] = \
+                    optional_params_core_attrs["new_signal_space_offsets"][idx]
+
+        output_signal_axes_offsets = tuple(output_signal_axes_offsets)
+
+    return output_signal_axes_offsets
+
+
+
+def _calc_output_signal_axes_offsets_resulting_from_crop(input_signal,
+                                                         optional_params):
+    func_alias = _calc_input_signal_datasubset_cropping_params
+    input_signal_datasubset_cropping_params = func_alias(input_signal,
+                                                         optional_params)
+
+    multi_dim_slice_for_cropping = \
+        input_signal_datasubset_cropping_params["multi_dim_slice_for_cropping"]
+
+    num_axes = len(input_signal.data.shape)
+
+    input_signal_axes_scales = tuple(input_signal.axes_manager[idx].scale
+                                     for idx
+                                     in range(num_axes))
+    input_signal_axes_offsets = tuple(input_signal.axes_manager[idx].offset
+                                      for idx
+                                      in range(num_axes))
+
+    num_spatial_dims = len(multi_dim_slice_for_cropping)
+
+    output_signal_axes_offsets = list(input_signal_axes_offsets)
+    for spatial_dim_idx in range(num_spatial_dims):
+        input_signal_axes_scale = \
+            input_signal_axes_scales[-2+spatial_dim_idx]
+        input_signal_axes_offset = \
+            input_signal_axes_offsets[-2+spatial_dim_idx]
+        
+        single_dim_slice_for_cropping = \
+            multi_dim_slice_for_cropping[-(spatial_dim_idx+1)]
+
+        output_signal_axes_offset = \
+            (input_signal_axes_offset
+             + input_signal_axes_scale*single_dim_slice_for_cropping.start)
+        output_signal_axes_offsets[-2+spatial_dim_idx] = \
+            output_signal_axes_offset
+
+    output_signal_axes_offsets = tuple(output_signal_axes_offsets)
+
+    return output_signal_axes_offsets
+
+
+
+def _calc_crop_window_center_in_pixel_coords(input_signal,
+                                             approximate_crop_window_center):
+    h_scale = input_signal.axes_manager[-2].scale
+    v_scale = input_signal.axes_manager[-1].scale
+
+    h_offset = input_signal.axes_manager[-2].offset
+    v_offset = input_signal.axes_manager[-1].offset
+
+    crop_window_center_in_pixel_coords = \
+        tuple()
+    crop_window_center_in_pixel_coords += \
+        (round((approximate_crop_window_center[0]-h_offset) / h_scale),)
+    crop_window_center_in_pixel_coords += \
+        (round((approximate_crop_window_center[1]-v_offset) / v_scale),)
+
+    return crop_window_center_in_pixel_coords
+
+
+
+def _calc_output_signal_axes_scales(input_signal, optional_params, bin_coords):
+    num_axes = len(input_signal.data.shape)
+
+    optional_params_core_attrs = optional_params.get_core_attrs(deep_copy=False)
+
+    input_signal_axes_scales = tuple(input_signal.axes_manager[idx].scale
+                                     for idx
+                                     in range(num_axes))
+
+    if "pad_mode" in optional_params_core_attrs:
+        output_signal_axes_scales = input_signal_axes_scales
+    elif "num_bins" in optional_params_core_attrs:
+        if "limits" in optional_params_core_attrs:
+            output_signal_axes_scales = (input_signal_axes_scales[:-1]
+                                         + (bin_coords[1]-bin_coords[0],))
+        else:
+            output_signal_axes_scales = (input_signal_axes_scales[:-2]
+                                         + (bin_coords[1]-bin_coords[0],))
+    else:
+        output_signal_axes_scales = list(input_signal_axes_scales)
+
+        if "block_dims" in optional_params_core_attrs:
+            block_dims = optional_params_core_attrs["block_dims"]
+            
+            for idx in (-2, -1):
+                output_signal_axes_scales[idx] *= \
+                    block_dims[idx]
+                
+        else:
+            for idx in (-2, -1):
+                output_signal_axes_scales[idx] = \
+                    optional_params_core_attrs["new_signal_space_scales"][idx]
+
+        output_signal_axes_scales = tuple(output_signal_axes_scales)
+
+    return output_signal_axes_scales
+
+
+
+_cls_alias = fancytypes.PreSerializableAndUpdatable
+class OptionalAzimuthalIntegrationParams(_cls_alias):
     r"""The set of optional parameters for the function
     :func:`empix.azimuthally_integrate`.
 
@@ -693,15 +1118,15 @@ class OptionalAzimuthalIntegrationParams(
     :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` as
 
     .. math ::
-	&S_{\mathbf{m}}\left(\left.R_{xy}=r_{xy}\right|
-        0\le U_{\phi}<2\pi;c_{x},c_{y}\right)\\&\quad=
-        \int_{0}^{2\pi}du_{\phi}\,r_{xy}
-        F_{\mathbf{m}}\left(c_{x}+r_{xy}\cos\left(u_{\phi}\right),
-        c_{y}+r_{xy}\sin\left(u_{\phi}\right)\right),
+        &S_{\mathbf{m}}\left(U_{r}=
+        u_{r}\left|0\le U_{\phi}<2\pi;c_{x},c_{y}\right.\right)
+        \\&\quad=\int_{0}^{2\pi}du_{\phi}\,u_{r}
+        F_{\mathbf{m}}\left(c_{x}+u_{r}\cos\left(u_{\phi}\right),
+        c_{y}+u_{r}\sin\left(u_{\phi}\right)\right),
         :label: azimuthal_integral__1
 
     where :math:`\left(c_{x},c_{y}\right)` is the reference point from which the
-    radial distance :math:`r_{xy}` is defined for the azimuthal integration.
+    radial distance :math:`u_r` is defined for the azimuthal integration.
 
     Parameters
     ----------
@@ -724,7 +1149,7 @@ class OptionalAzimuthalIntegrationParams(
         the radial range respectively, in the same units of the horizontal and
         vertical axes respectively of the signal space of the input signal. Note
         that in this case ``radial_range`` must satisfy
-        ``0<=radial_range[0]<=radial_range[1]``. Moreover, the function
+        ``0<=radial_range[0]<radial_range[1]``. Moreover, the function
         represented by the input signal is assumed to be equal to zero
         everywhere outside of the signal space boundaries of said input signal.
     num_bins : `int` | `None`, optional
@@ -741,74 +1166,123 @@ class OptionalAzimuthalIntegrationParams(
         input ``hyperspy`` signal.  Otherwise, if ``title`` is a `str`, then the
         ``output_signal.metadata.General.title`` is set to the value of 
         ``title``.
+    skip_validation_and_conversion : `bool`, optional
+        Let ``validation_and_conversion_funcs`` and ``core_attrs`` denote the
+        attributes :attr:`~fancytypes.Checkable.validation_and_conversion_funcs`
+        and :attr:`~fancytypes.Checkable.core_attrs` respectively, both of which
+        being `dict` objects.
 
-    Attributes
-    ----------
-    core_attrs : `dict`, read-only
-        A `dict` representation of the core attributes: each `dict` key is a
-        `str` representing the name of a core attribute, and the corresponding
-        `dict` value is the object to which said core attribute is set. The core
-        attributes are the same as the construction parameters, except that 
-        their values might have been updated since construction.
+        Let ``params_to_be_mapped_to_core_attrs`` denote the `dict`
+        representation of the constructor parameters excluding the parameter
+        ``skip_validation_and_conversion``, where each `dict` key ``key`` is a
+        different constructor parameter name, excluding the name
+        ``"skip_validation_and_conversion"``, and
+        ``params_to_be_mapped_to_core_attrs[key]`` would yield the value of the
+        constructor parameter with the name given by ``key``.
+
+        If ``skip_validation_and_conversion`` is set to ``False``, then for each
+        key ``key`` in ``params_to_be_mapped_to_core_attrs``,
+        ``core_attrs[key]`` is set to ``validation_and_conversion_funcs[key]
+        (params_to_be_mapped_to_core_attrs)``.
+
+        Otherwise, if ``skip_validation_and_conversion`` is set to ``True``,
+        then ``core_attrs`` is set to
+        ``params_to_be_mapped_to_core_attrs.copy()``. This option is desired
+        primarily when the user wants to avoid potentially expensive deep copies
+        and/or conversions of the `dict` values of
+        ``params_to_be_mapped_to_core_attrs``, as it is guaranteed that no
+        copies or conversions are made in this case.
 
     """
-    _validation_and_conversion_funcs = \
-        {"center": _check_and_convert_center_v1,
-         "radial_range": _check_and_convert_radial_range_v1,
-         "num_bins": _check_and_convert_num_bins_v1,
-         "title": _check_and_convert_title_v1}
+    ctor_param_names = ("center", "radial_range", "num_bins", "title")
+    kwargs = {"namespace_as_dict": globals(),
+              "ctor_param_names": ctor_param_names}
+    
+    _validation_and_conversion_funcs_ = \
+        fancytypes.return_validation_and_conversion_funcs(**kwargs)
+    _pre_serialization_funcs_ = \
+        fancytypes.return_pre_serialization_funcs(**kwargs)
+    _de_pre_serialization_funcs_ = \
+        fancytypes.return_de_pre_serialization_funcs(**kwargs)
 
-    _pre_serialization_funcs = \
-        {"center": _pre_serialize_center,
-         "radial_range": _pre_serialize_radial_range,
-         "num_bins": _pre_serialize_num_bins,
-         "title": _pre_serialize_title}
+    del ctor_param_names, kwargs
 
-    _de_pre_serialization_funcs = \
-        {"center": _de_pre_serialize_center,
-         "radial_range": _de_pre_serialize_radial_range,
-         "num_bins": _de_pre_serialize_num_bins,
-         "title": _de_pre_serialize_title}
+    
 
     def __init__(self,
-                 center=None,
-                 radial_range=None,
-                 num_bins=None,
-                 title=None):
-        ctor_params = {"center": center,
-                       "radial_range": radial_range,
-                       "num_bins": num_bins,
-                       "title": title}
-        fancytypes.PreSerializableAndUpdatable.__init__(self, ctor_params)
+                 center=\
+                 _default_center,
+                 radial_range=\
+                 _default_radial_range,
+                 num_bins=\
+                 _default_num_bins,
+                 title=\
+                 _default_title,
+                 skip_validation_and_conversion=\
+                 _default_skip_validation_and_conversion):
+        ctor_params = {key: val
+                       for key, val in locals().items()
+                       if (key not in ("self", "__class__"))}
+        kwargs = ctor_params
+        kwargs["skip_cls_tests"] = True
+        fancytypes.PreSerializableAndUpdatable.__init__(self, **kwargs)
 
         return None
 
 
 
-def azimuthally_integrate(input_signal, optional_params=None):
+    @classmethod
+    def get_validation_and_conversion_funcs(cls):
+        validation_and_conversion_funcs = \
+            cls._validation_and_conversion_funcs_.copy()
+
+        return validation_and_conversion_funcs
+
+
+    
+    @classmethod
+    def get_pre_serialization_funcs(cls):
+        pre_serialization_funcs = \
+            cls._pre_serialization_funcs_.copy()
+
+        return pre_serialization_funcs
+
+
+    
+    @classmethod
+    def get_de_pre_serialization_funcs(cls):
+        de_pre_serialization_funcs = \
+            cls._de_pre_serialization_funcs_.copy()
+
+        return de_pre_serialization_funcs
+
+
+
+def azimuthally_integrate(input_signal,
+                          optional_params=_default_optional_params):
     r"""Integrate azimuthally a given input 2D ``hyperspy`` signal.
 
-    This current Python function assumes that the input 2D ``hyperspy`` signal
-    samples from a mathematical function
-    :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` which is piecewise continuous
-    in :math:`u_{x}` and :math:`u_{y}`, where :math:`u_{x}` and :math:`u_{y}`
-    are the horizontal and vertical coordinates in the signal space of the input
-    signal, and :math:`\mathbf{m}` is a vector of integers representing the
-    navigation indices of the input signal. The Python function approximates the
-    azimuthal integral of :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` given
-    the input signal. We define the azimuthal integral of
+    This Python function assumes that the input 2D ``hyperspy`` signal samples
+    from a mathematical function :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)`
+    which is piecewise continuous in :math:`u_{x}` and :math:`u_{y}`, where
+    :math:`u_{x}` and :math:`u_{y}` are the horizontal and vertical coordinates
+    in the signal space of the input signal, and :math:`\mathbf{m}` is a vector
+    of integers representing the navigation indices of the input signal. The
+    Python function approximates the azimuthal integral of
+    :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` given the input signal. We
+    define the azimuthal integral of
     :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` as
 
     .. math ::
-	&S_{\mathbf{m}}\left(\left.R_{xy}=r_{xy}\right|
-        0\le U_{\phi}<2\pi;c_{x},c_{y}\right)\\&\quad=
-        \int_{0}^{2\pi}du_{\phi}\,r_{xy}
-        F_{\mathbf{m}}\left(c_{x}+r_{xy}\cos\left(u_{\phi}\right),
-        c_{y}+r_{xy}\sin\left(u_{\phi}\right)\right),
+        &S_{\mathbf{m}}\left(U_{r}=
+        u_{r}\left|0\le U_{\phi}<2\pi;c_{x},c_{y}\right.\right)
+        \\&\quad=\int_{0}^{2\pi}du_{\phi}\,u_{r}
+        F_{\mathbf{m}}\left(c_{x}+u_{r}\cos\left(u_{\phi}\right),
+        c_{y}+u_{r}\sin\left(u_{\phi}\right)\right),
         :label: azimuthal_integral__2
 
     where :math:`\left(c_{x},c_{y}\right)` is the reference point from which the
-    radial distance :math:`r_{xy}` is defined for the azimuthal integration.
+    radial distance :math:`u_r` is defined for the azimuthal integration.
 
     Parameters
     ----------
@@ -825,50 +1299,60 @@ def azimuthally_integrate(input_signal, optional_params=None):
     -------
     output_signal : :class:`hyperspy._signals.signal1d.Signal1D` | :class:`hyperspy._signals.complex_signal1d.ComplexSignal1D`
         The output ``hyperspy`` signal that samples the azimuthal integral of
-        the input signal ``input_signal``. Note that except for the title, the
-        metadata of the output signal is determined from the metadata of the
-        input signal.
+        the input signal ``input_signal``. Note that the metadata of the input 
+        signal is copied over to the output signal, with the title being 
+        overwritten.
 
     """
-    if optional_params is None:
-        optional_params = OptionalAzimuthalIntegrationParams()
-    if not isinstance(optional_params, OptionalAzimuthalIntegrationParams):
-        raise TypeError(_azimuthally_integrate_err_msg_1)
-    kwargs = {"center": optional_params.core_attrs["center"],
-              "radial_range": optional_params.core_attrs["radial_range"],
-              "num_bins": optional_params.core_attrs["num_bins"],
-              "title": optional_params.core_attrs["title"]}
-    temp_optional_params = OptionalAzimuthalAveragingParams(**kwargs)
-    
-    output_signal = azimuthally_average(input_signal, temp_optional_params)
-    title = optional_params.core_attrs["title"]
-    if title is None:
-        title = _default_title(input_signal, "Azimuthally Integrated ", "")
-    output_signal.metadata.General.title = title
+    params = locals()
+    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    for param_name in params:
+        func_name = "_check_and_convert_" + param_name
+        func_alias = globals()[func_name]
+        params[param_name] = func_alias(params)
 
-    bin_coords = _bin_coords(output_signal)
-    navigation_rank = len(output_signal.data.shape) - 1
-
-    for idx, r_xy in enumerate(bin_coords):
-        multi_dim_slice = tuple([slice(None)]*navigation_rank + [idx])
-        output_signal.data[multi_dim_slice] *= 2 * np.pi * r_xy
+    func_name = "_" + inspect.stack()[0][3]
+    func_alias = globals()[func_name]
+    kwargs = params
+    del kwargs["action_to_apply_to_input_signal"]
+    output_signal = func_alias(**kwargs)
 
     return output_signal
 
 
 
-def _bin_coords(output_signal):
-    offset = output_signal.axes_manager[-1].offset
-    scale = output_signal.axes_manager[-1].scale
-    size = output_signal.axes_manager[-1].size
+def _azimuthally_integrate(input_signal, optional_params):
+    optional_params_core_attrs = optional_params.get_core_attrs(deep_copy=False)
+    
+    kwargs = {"skip_validation_and_conversion": True,
+              **optional_params_core_attrs}
+    optional_params = OptionalAzimuthalIntegrationParams(**kwargs)
+
+    output_signal = _azimuthally_average(input_signal, optional_params)
+    
+    bin_coords = _calc_bin_coords_from_signal(signal=output_signal)
+    navigation_rank = len(output_signal.data.shape) - 1
+
+    for idx, r_xy in enumerate(bin_coords):
+        multi_dim_slice = tuple([slice(None)]*navigation_rank + [idx])
+        output_signal.data[multi_dim_slice] *= 2*np.pi*r_xy
+
+    return output_signal
+
+
+
+def _calc_bin_coords_from_signal(signal):
+    offset = signal.axes_manager[-1].offset
+    scale = signal.axes_manager[-1].scale
+    size = signal.axes_manager[-1].size
     bin_coords = np.arange(offset, offset + size*scale - 1e-10, scale)
 
     return bin_coords
 
 
 
-class OptionalAnnularAveragingParams(
-        fancytypes.PreSerializableAndUpdatable):
+_cls_alias = fancytypes.PreSerializableAndUpdatable
+class OptionalAnnularAveragingParams(_cls_alias):
     r"""The set of optional parameters for the function
     :func:`empix.annularly_average`.
 
@@ -885,16 +1369,16 @@ class OptionalAnnularAveragingParams(
     :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` as
 
     .. math ::
-	&\overline{S}_{\mathbf{m}}\left(\left.r_{xy,i}\le R<r_{xy,f}\right|
-        0\le U_{\phi}<2\pi;c_{x},c_{y}\right)\\&\quad
-        =\frac{1}{\pi\left(r_{xy,f}^{2}-r_{xy,i}^{2}\right)}
-        \int_{r_{xy,i}}^{r_{xy,f}}dr_{xy}\int_{0}^{2\pi}du_{\phi}\,r_{xy}
-        F_{\mathbf{m}}\left(c_{x}+r_{xy}\cos\left(u_{\phi}\right),
-        c_{y}+r_{xy}\sin\left(u_{\phi}\right)\right),
+	&\overline{S}_{\mathbf{m}}\left(u_{r,i}\le U_{r}<u_{r,f}
+        \left|0\le U_{\phi}<2\pi;c_{x},c_{y}\right.\right)
+        \\&\quad=\frac{1}{\pi\left(u_{r,f}^{2}-u_{r,i}^{2}\right)}
+        \int_{u_{r,i}}^{u_{r,f}}du_{r}\,\int_{0}^{2\pi}du_{\phi}\,u_{r}
+        F_{\mathbf{m}}\left(c_{x}+u_{r}\cos\left(u_{\phi}\right),
+        c_{y}+u_{r}\sin\left(u_{\phi}\right)\right),
         :label: annular_average__1
 
     where :math:`\left(c_{x},c_{y}\right)` is the reference point from which the
-    radial distance :math:`r_{xy}` is defined for the annular averaging.
+    radial distance :math:`u_r` is defined for the annular averaging.
 
     Parameters
     ----------
@@ -917,7 +1401,7 @@ class OptionalAnnularAveragingParams(
         the radial range respectively, in the same units of the horizontal and
         vertical axes respectively of the signal space of the input signal. Note
         that in this case ``radial_range`` must satisfy
-        ``0<=radial_range[0]<=radial_range[1]``. Moreover, the function
+        ``0<=radial_range[0]<radial_range[1]``. Moreover, the function
         represented by the input signal is assumed to be equal to zero
         everywhere outside of the signal space boundaries of said input signal.
     title : `str` | `None`, optional
@@ -927,70 +1411,121 @@ class OptionalAnnularAveragingParams(
         input ``hyperspy`` signal.  Otherwise, if ``title`` is a `str`, then the
         ``output_signal.metadata.General.title`` is set to the value of 
         ``title``.
+    skip_validation_and_conversion : `bool`, optional
+        Let ``validation_and_conversion_funcs`` and ``core_attrs`` denote the
+        attributes :attr:`~fancytypes.Checkable.validation_and_conversion_funcs`
+        and :attr:`~fancytypes.Checkable.core_attrs` respectively, both of which
+        being `dict` objects.
 
-    Attributes
-    ----------
-    core_attrs : `dict`, read-only
-        A `dict` representation of the core attributes: each `dict` key is a
-        `str` representing the name of a core attribute, and the corresponding
-        `dict` value is the object to which said core attribute is set. The core
-        attributes are the same as the construction parameters, except that 
-        their values might have been updated since construction.
+        Let ``params_to_be_mapped_to_core_attrs`` denote the `dict`
+        representation of the constructor parameters excluding the parameter
+        ``skip_validation_and_conversion``, where each `dict` key ``key`` is a
+        different constructor parameter name, excluding the name
+        ``"skip_validation_and_conversion"``, and
+        ``params_to_be_mapped_to_core_attrs[key]`` would yield the value of the
+        constructor parameter with the name given by ``key``.
+
+        If ``skip_validation_and_conversion`` is set to ``False``, then for each
+        key ``key`` in ``params_to_be_mapped_to_core_attrs``,
+        ``core_attrs[key]`` is set to ``validation_and_conversion_funcs[key]
+        (params_to_be_mapped_to_core_attrs)``.
+
+        Otherwise, if ``skip_validation_and_conversion`` is set to ``True``,
+        then ``core_attrs`` is set to
+        ``params_to_be_mapped_to_core_attrs.copy()``. This option is desired
+        primarily when the user wants to avoid potentially expensive deep copies
+        and/or conversions of the `dict` values of
+        ``params_to_be_mapped_to_core_attrs``, as it is guaranteed that no
+        copies or conversions are made in this case.
 
     """
-    _validation_and_conversion_funcs = \
-        {"center": _check_and_convert_center_v1,
-         "radial_range": _check_and_convert_radial_range_v1,
-         "title": _check_and_convert_title_v1}
+    ctor_param_names = ("center", "radial_range", "title")
+    kwargs = {"namespace_as_dict": globals(),
+              "ctor_param_names": ctor_param_names}
+    
+    _validation_and_conversion_funcs_ = \
+        fancytypes.return_validation_and_conversion_funcs(**kwargs)
+    _pre_serialization_funcs_ = \
+        fancytypes.return_pre_serialization_funcs(**kwargs)
+    _de_pre_serialization_funcs_ = \
+        fancytypes.return_de_pre_serialization_funcs(**kwargs)
 
-    _pre_serialization_funcs = \
-        {"center": _pre_serialize_center,
-         "radial_range": _pre_serialize_radial_range,
-         "title": _pre_serialize_title}
+    del ctor_param_names, kwargs
 
-    _de_pre_serialization_funcs = \
-        {"center": _de_pre_serialize_center,
-         "radial_range": _de_pre_serialize_radial_range,
-         "title": _de_pre_serialize_title}
+    
 
     def __init__(self,
-                 center=None,
-                 radial_range=None,
-                 title=None):
-        ctor_params = {"center": center,
-                       "radial_range": radial_range,
-                       "title": title}
-        fancytypes.PreSerializableAndUpdatable.__init__(self, ctor_params)
+                 center=\
+                 _default_center,
+                 radial_range=\
+                 _default_radial_range,
+                 title=\
+                 _default_title,
+                 skip_validation_and_conversion=\
+                 _default_skip_validation_and_conversion):
+        ctor_params = {key: val
+                       for key, val in locals().items()
+                       if (key not in ("self", "__class__"))}
+        kwargs = ctor_params
+        kwargs["skip_cls_tests"] = True
+        fancytypes.PreSerializableAndUpdatable.__init__(self, **kwargs)
 
         return None
 
 
 
-def annularly_average(input_signal, optional_params=None):
+    @classmethod
+    def get_validation_and_conversion_funcs(cls):
+        validation_and_conversion_funcs = \
+            cls._validation_and_conversion_funcs_.copy()
+
+        return validation_and_conversion_funcs
+
+
+    
+    @classmethod
+    def get_pre_serialization_funcs(cls):
+        pre_serialization_funcs = \
+            cls._pre_serialization_funcs_.copy()
+
+        return pre_serialization_funcs
+
+
+    
+    @classmethod
+    def get_de_pre_serialization_funcs(cls):
+        de_pre_serialization_funcs = \
+            cls._de_pre_serialization_funcs_.copy()
+
+        return de_pre_serialization_funcs
+
+
+
+def annularly_average(input_signal, optional_params=_default_optional_params):
     r"""Average annularly a given input 2D ``hyperspy`` signal.
 
-    This current Python function assumes that the input 2D ``hyperspy`` signal
-    samples from a mathematical function
-    :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` which is piecewise continuous
-    in :math:`u_{x}` and :math:`u_{y}`, where :math:`u_{x}` and :math:`u_{y}`
-    are the horizontal and vertical coordinates in the signal space of the input
-    signal, and :math:`\mathbf{m}` is a vector of integers representing the
-    navigation indices of the input signal. The Python function approximates the
-    annular average of :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` given the
-    input signal. We define the annular average of
-    :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` as
+    This Python function assumes that the input 2D ``hyperspy`` signal samples
+    from a mathematical function :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)`
+    which is piecewise continuous in :math:`u_{x}` and :math:`u_{y}`, where
+    :math:`u_{x}` and :math:`u_{y}` are the horizontal and vertical coordinates
+    in the signal space of the input signal, and :math:`\mathbf{m}` is a vector
+    of integers representing the navigation indices of the input signal. The
+    Python function approximates the annular average of
+    :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` given the input signal. We
+    define the annular average of :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)`
+    as
 
     .. math ::
-	&\overline{S}_{\mathbf{m}}\left(\left.r_{xy,i}\le R<r_{xy,f}\right|
-        0\le U_{\phi}<2\pi;c_{x},c_{y}\right)\\&\quad
-        =\frac{1}{\pi\left(r_{xy,f}^{2}-r_{xy,i}^{2}\right)}
-        \int_{r_{xy,i}}^{r_{xy,f}}dr_{xy}\int_{0}^{2\pi}du_{\phi}\,r_{xy}
-        F_{\mathbf{m}}\left(c_{x}+r_{xy}\cos\left(u_{\phi}\right),
-        c_{y}+r_{xy}\sin\left(u_{\phi}\right)\right),
+	&\overline{S}_{\mathbf{m}}\left(u_{r,i}\le U_{r}<u_{r,f}
+        \left|0\le U_{\phi}<2\pi;c_{x},c_{y}\right.\right)
+        \\&\quad=\frac{1}{\pi\left(u_{r,f}^{2}-u_{r,i}^{2}\right)}
+        \int_{u_{r,i}}^{u_{r,f}}du_{r}\,\int_{0}^{2\pi}du_{\phi}\,u_{r}
+        F_{\mathbf{m}}\left(c_{x}+u_{r}\cos\left(u_{\phi}\right),
+        c_{y}+u_{r}\sin\left(u_{\phi}\right)\right),
         :label: annular_average__2
 
     where :math:`\left(c_{x},c_{y}\right)` is the reference point from which the
-    radial distance :math:`r_{xy}` is defined for the annular averaging.
+    radial distance :math:`u_r` is defined for the annular averaging.
 
     Parameters
     ----------
@@ -1007,55 +1542,52 @@ def annularly_average(input_signal, optional_params=None):
     -------
     output_signal : :class:`hyperspy.signal.BaseSignal` | :class:`hyperspy._signals.complex_signal.ComplexSignal`
         The output ``hyperspy`` signal that samples the annular average of the
-        input signal ``input_signal``. Note that except for the title, the
-        metadata of the output signal is determined from the metadata of the
-        input signal.
+        input signal ``input_signal``. Note that the metadata of the input 
+        signal is copied over to the output signal, with the title being 
+        overwritten.
 
     """
-    _check_2D_input_signal(input_signal)
-    if optional_params is None:
-        optional_params = OptionalAnnularAveragingParams()
-    if not isinstance(optional_params, OptionalAnnularAveragingParams):
-        raise TypeError(_annularly_average_err_msg_1)
-    kwargs = {"center": optional_params.core_attrs["center"],
-              "radial_range": optional_params.core_attrs["radial_range"],
-              "num_bins": 2 * min(input_signal.data.shape[-2:]),
-              "title": optional_params.core_attrs["title"]}
-    temp_optional_params = OptionalAzimuthalAveragingParams(**kwargs)
-    temp_signal = azimuthally_average(input_signal, temp_optional_params)
+    params = locals()
+    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    for param_name in params:
+        func_name = "_check_and_convert_" + param_name
+        func_alias = globals()[func_name]
+        params[param_name] = func_alias(params)
 
-    bin_coords = _bin_coords(temp_signal)
-    navigation_rank = len(temp_signal.data.shape) - 1
-
-    for idx, r_xy in enumerate(bin_coords):
-        multi_dim_slice = tuple([slice(None)]*navigation_rank + [idx])
-        temp_signal.data[multi_dim_slice] *= 2 * np.pi * r_xy
-
-    center = temp_optional_params.core_attrs["center"]
-    center = _check_and_convert_center_v2(center, input_signal)
-
-    radial_range = temp_optional_params.core_attrs["radial_range"]
-    radial_range = _check_and_convert_radial_range_v2(radial_range,
-                                                      input_signal,
-                                                      center)
-    r_xy_i, r_xy_f = (radial_range[0]/1000, radial_range[1]/1000)
-    area_of_annulus = np.pi * (r_xy_f**2 - r_xy_i**2)    
-    r_xy_scale = temp_signal.axes_manager[-1].scale
-
-    output_signal = temp_signal.sum(axis=-1)
-    output_signal.data *= r_xy_scale / area_of_annulus
-
-    title = optional_params.core_attrs["title"]
-    if title is None:
-        title = _default_title(input_signal, "Annularly Averaged ", "")
-    output_signal.metadata.General.title = title
+    func_name = "_" + inspect.stack()[0][3]
+    func_alias = globals()[func_name]
+    kwargs = params
+    del kwargs["action_to_apply_to_input_signal"]
+    output_signal = func_alias(**kwargs)
 
     return output_signal
 
 
 
-class OptionalAnnularIntegrationParams(
-        fancytypes.PreSerializableAndUpdatable):
+def _annularly_average(input_signal, optional_params):
+    optional_params_core_attrs = optional_params.get_core_attrs(deep_copy=False)
+    optional_params_core_attrs["num_bins"] = 2*min(input_signal.data.shape[-2:])
+
+    kwargs = {"skip_validation_and_conversion": True,
+              **optional_params_core_attrs}
+    optional_params = OptionalAzimuthalIntegrationParams(**kwargs)
+    
+    output_signal = _azimuthally_integrate(input_signal, optional_params)
+
+    r_xy_i, r_xy_f = optional_params_core_attrs["radial_range"]
+    area_of_annulus = np.pi*(r_xy_f**2 - r_xy_i**2)
+    
+    r_xy_scale = output_signal.axes_manager[-1].scale
+
+    output_signal = output_signal.sum(axis=-1)
+    output_signal.data *= (r_xy_scale/area_of_annulus)
+
+    return output_signal
+
+
+
+_cls_alias = fancytypes.PreSerializableAndUpdatable
+class OptionalAnnularIntegrationParams(_cls_alias):
     r"""The set of optional parameters for the function
     :func:`empix.annularly_integrate`.
 
@@ -1072,15 +1604,16 @@ class OptionalAnnularIntegrationParams(
     :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` as
 
     .. math ::
-	&S_{\mathbf{m}}\left(\left.r_{xy,i}\le R<r_{xy,f}\right|
-        0\le U_{\phi}<2\pi;c_{x},c_{y}\right)\\&\quad
-        =\int_{r_{xy,i}}^{r_{xy,f}}dr_{xy}\int_{0}^{2\pi}du_{\phi}\,r_{xy}
-        F_{\mathbf{m}}\left(c_{x}+r_{xy}\cos\left(u_{\phi}\right),
-        c_{y}+r_{xy}\sin\left(u_{\phi}\right)\right),
+        &S_{\mathbf{m}}\left(u_{r,i}\le U_{r}<u_{r,f}
+        \left|0\le U_{\phi}<2\pi;c_{x},c_{y}\right.\right)
+        \\&\quad=\int_{u_{r,i}}^{u_{r,f}}du_{r}\,\int_{0}^{2\pi}
+        du_{\phi}\,u_{r}
+        F_{\mathbf{m}}\left(c_{x}+u_{r}\cos\left(u_{\phi}\right),
+        c_{y}+u_{r}\sin\left(u_{\phi}\right)\right),
         :label: annular_integral__1
 
     where :math:`\left(c_{x},c_{y}\right)` is the reference point from which the
-    radial distance :math:`r_{xy}` is defined for the annular integration.
+    radial distance :math:`u_r` is defined for the annular integration.
 
     Parameters
     ----------
@@ -1103,7 +1636,7 @@ class OptionalAnnularIntegrationParams(
         the radial range respectively, in the same units of the horizontal and
         vertical axes respectively of the signal space of the input signal. Note
         that in this case ``radial_range`` must satisfy
-        ``0<=radial_range[0]<=radial_range[1]``. Moreover, the function
+        ``0<=radial_range[0]<radial_range[1]``. Moreover, the function
         represented by the input signal is assumed to be equal to zero
         everywhere outside of the signal space boundaries of said input signal.
     title : `str` | `None`, optional
@@ -1113,69 +1646,121 @@ class OptionalAnnularIntegrationParams(
         input ``hyperspy`` signal.  Otherwise, if ``title`` is a `str`, then the
         ``output_signal.metadata.General.title`` is set to the value of 
         ``title``.
+    skip_validation_and_conversion : `bool`, optional
+        Let ``validation_and_conversion_funcs`` and ``core_attrs`` denote the
+        attributes :attr:`~fancytypes.Checkable.validation_and_conversion_funcs`
+        and :attr:`~fancytypes.Checkable.core_attrs` respectively, both of which
+        being `dict` objects.
 
-    Attributes
-    ----------
-    core_attrs : `dict`, read-only
-        A `dict` representation of the core attributes: each `dict` key is a
-        `str` representing the name of a core attribute, and the corresponding
-        `dict` value is the object to which said core attribute is set. The core
-        attributes are the same as the construction parameters, except that 
-        their values might have been updated since construction.
+        Let ``params_to_be_mapped_to_core_attrs`` denote the `dict`
+        representation of the constructor parameters excluding the parameter
+        ``skip_validation_and_conversion``, where each `dict` key ``key`` is a
+        different constructor parameter name, excluding the name
+        ``"skip_validation_and_conversion"``, and
+        ``params_to_be_mapped_to_core_attrs[key]`` would yield the value of the
+        constructor parameter with the name given by ``key``.
+
+        If ``skip_validation_and_conversion`` is set to ``False``, then for each
+        key ``key`` in ``params_to_be_mapped_to_core_attrs``,
+        ``core_attrs[key]`` is set to ``validation_and_conversion_funcs[key]
+        (params_to_be_mapped_to_core_attrs)``.
+
+        Otherwise, if ``skip_validation_and_conversion`` is set to ``True``,
+        then ``core_attrs`` is set to
+        ``params_to_be_mapped_to_core_attrs.copy()``. This option is desired
+        primarily when the user wants to avoid potentially expensive deep copies
+        and/or conversions of the `dict` values of
+        ``params_to_be_mapped_to_core_attrs``, as it is guaranteed that no
+        copies or conversions are made in this case.
 
     """
-    _validation_and_conversion_funcs = \
-        {"center": _check_and_convert_center_v1,
-         "radial_range": _check_and_convert_radial_range_v1,
-         "title": _check_and_convert_title_v1}
+    ctor_param_names = ("center", "radial_range", "title")
+    kwargs = {"namespace_as_dict": globals(),
+              "ctor_param_names": ctor_param_names}
+    
+    _validation_and_conversion_funcs_ = \
+        fancytypes.return_validation_and_conversion_funcs(**kwargs)
+    _pre_serialization_funcs_ = \
+        fancytypes.return_pre_serialization_funcs(**kwargs)
+    _de_pre_serialization_funcs_ = \
+        fancytypes.return_de_pre_serialization_funcs(**kwargs)
 
-    _pre_serialization_funcs = \
-        {"center": _pre_serialize_center,
-         "radial_range": _pre_serialize_radial_range,
-         "title": _pre_serialize_title}
+    del ctor_param_names, kwargs
 
-    _de_pre_serialization_funcs = \
-        {"center": _de_pre_serialize_center,
-         "radial_range": _de_pre_serialize_radial_range,
-         "title": _de_pre_serialize_title}
+    
 
     def __init__(self,
-                 center=None,
-                 radial_range=None,
-                 title=None):
-        ctor_params = {"center": center,
-                       "radial_range": radial_range,
-                       "title": title}
-        fancytypes.PreSerializableAndUpdatable.__init__(self, ctor_params)
+                 center=\
+                 _default_center,
+                 radial_range=\
+                 _default_radial_range,
+                 title=\
+                 _default_title,
+                 skip_validation_and_conversion=\
+                 _default_skip_validation_and_conversion):
+        ctor_params = {key: val
+                       for key, val in locals().items()
+                       if (key not in ("self", "__class__"))}
+        kwargs = ctor_params
+        kwargs["skip_cls_tests"] = True
+        fancytypes.PreSerializableAndUpdatable.__init__(self, **kwargs)
 
         return None
 
 
 
-def annularly_integrate(input_signal, optional_params=None):
+    @classmethod
+    def get_validation_and_conversion_funcs(cls):
+        validation_and_conversion_funcs = \
+            cls._validation_and_conversion_funcs_.copy()
+
+        return validation_and_conversion_funcs
+
+
+    
+    @classmethod
+    def get_pre_serialization_funcs(cls):
+        pre_serialization_funcs = \
+            cls._pre_serialization_funcs_.copy()
+
+        return pre_serialization_funcs
+
+
+    
+    @classmethod
+    def get_de_pre_serialization_funcs(cls):
+        de_pre_serialization_funcs = \
+            cls._de_pre_serialization_funcs_.copy()
+
+        return de_pre_serialization_funcs
+
+
+
+def annularly_integrate(input_signal, optional_params=_default_optional_params):
     r"""Integrate annularly a given input 2D ``hyperspy`` signal.
 
-    This current Python function assumes that the input 2D ``hyperspy`` signal
-    samples from a mathematical function
-    :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` which is piecewise continuous
-    in :math:`u_{x}` and :math:`u_{y}`, where :math:`u_{x}` and :math:`u_{y}`
-    are the horizontal and vertical coordinates in the signal space of the input
-    signal, and :math:`\mathbf{m}` is a vector of integers representing the
-    navigation indices of the input signal. The Python function approximates the
-    annular integral of :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` given the
-    input signal. We define the annular integral of
+    This Python function assumes that the input 2D ``hyperspy`` signal samples
+    from a mathematical function :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)`
+    which is piecewise continuous in :math:`u_{x}` and :math:`u_{y}`, where
+    :math:`u_{x}` and :math:`u_{y}` are the horizontal and vertical coordinates
+    in the signal space of the input signal, and :math:`\mathbf{m}` is a vector
+    of integers representing the navigation indices of the input signal. The
+    Python function approximates the annular integral of
+    :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` given the input signal. We
+    define the annular integral of
     :math:`F_{\mathbf{m}}\left(u_{x},u_{y}\right)` as
 
     .. math ::
-	&S_{\mathbf{m}}\left(\left.r_{xy,i}\le R<r_{xy,f}\right|
-        0\le U_{\phi}<2\pi;c_{x},c_{y}\right)\\&\quad
-        =\int_{r_{xy,i}}^{r_{xy,f}}dr_{xy}\int_{0}^{2\pi}du_{\phi}\,r_{xy}
-        F_{\mathbf{m}}\left(c_{x}+r_{xy}\cos\left(u_{\phi}\right),
-        c_{y}+r_{xy}\sin\left(u_{\phi}\right)\right),
+	&S_{\mathbf{m}}\left(u_{r,i}\le U_{r}<u_{r,f}
+        \left|0\le U_{\phi}<2\pi;c_{x},c_{y}\right.\right)
+        \\&\quad=\int_{u_{r,i}}^{u_{r,f}}du_{r}\,\int_{0}^{2\pi}
+        du_{\phi}\,u_{r}
+        F_{\mathbf{m}}\left(c_{x}+u_{r}\cos\left(u_{\phi}\right),
+        c_{y}+u_{r}\sin\left(u_{\phi}\right)\right),
         :label: annular_integral__2
 
     where :math:`\left(c_{x},c_{y}\right)` is the reference point from which the
-    radial distance :math:`r_{xy}` is defined for the annular integration.
+    radial distance :math:`` is defined for the annular integration.
 
     Parameters
     ----------
@@ -1192,66 +1777,93 @@ def annularly_integrate(input_signal, optional_params=None):
     -------
     output_signal : :class:`hyperspy.signal.BaseSignal` | :class:`hyperspy._signals.complex_signal.ComplexSignal`
         The output ``hyperspy`` signal that samples the annular integral of the
-        input signal ``input_signal``. Note that except for the title, the
-        metadata of the output signal is determined from the metadata of the
-        input signal.
+        input signal ``input_signal``. Note that the metadata of the input 
+        signal is copied over to the output signal, with the title being 
+        overwritten.
 
     """
-    _check_2D_input_signal(input_signal)
-    if optional_params is None:
-        optional_params = OptionalAnnularIntegrationParams()
-    if not isinstance(optional_params, OptionalAnnularIntegrationParams):
-        raise TypeError(_annularly_integrate_err_msg_1)
-    kwargs = {"center": optional_params.core_attrs["center"],
-              "radial_range": optional_params.core_attrs["radial_range"],
-              "num_bins": 2 * min(input_signal.data.shape[-2:]),
-              "title": optional_params.core_attrs["title"]}
-    temp_optional_params = OptionalAzimuthalIntegrationParams(**kwargs)
-    
-    integrated_azimuthally_signal = azimuthally_integrate(input_signal,
-                                                          temp_optional_params)
-    r_xy_scale = integrated_azimuthally_signal.axes_manager[-1].scale
-    output_signal = integrated_azimuthally_signal.sum(axis=-1)
-    output_signal.data *= r_xy_scale
+    params = locals()
+    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    for param_name in params:
+        func_name = "_check_and_convert_" + param_name
+        func_alias = globals()[func_name]
+        params[param_name] = func_alias(params)
 
-    title = optional_params.core_attrs["title"]
-    if title is None:
-        title = _default_title(input_signal, "Annularly Integrated ", "")
-    output_signal.metadata.General.title = title
+    func_name = "_" + inspect.stack()[0][3]
+    func_alias = globals()[func_name]
+    kwargs = params
+    del kwargs["action_to_apply_to_input_signal"]
+    output_signal = func_alias(**kwargs)
 
     return output_signal
 
 
 
-def _check_and_convert_limits_v1(ctor_params):
-    limits = ctor_params["limits"]
+def _annularly_integrate(input_signal, optional_params):
+    optional_params_core_attrs = optional_params.get_core_attrs(deep_copy=False)
+    optional_params_core_attrs["num_bins"] = 2*min(input_signal.data.shape[-2:])
+
+    kwargs = {"skip_validation_and_conversion": True,
+              **optional_params_core_attrs}
+    optional_params = OptionalAzimuthalIntegrationParams(**kwargs)
     
-    if limits is not None:
+    output_signal = _azimuthally_integrate(input_signal, optional_params)
+    
+    r_xy_scale = output_signal.axes_manager[-1].scale
+    
+    output_signal = output_signal.sum(axis=-1)
+    output_signal.data *= r_xy_scale
+
+    return output_signal
+
+
+
+def _check_and_convert_limits(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    obj = params[obj_name]
+
+    param_name = "input_signal"
+    input_signal = params.get(param_name, None)
+    
+    if obj is not None:
         try:
-            limits = czekitout.convert.to_pair_of_floats(limits, "limits")
+            kwargs = {"obj": obj, "obj_name": obj_name}
+            limits = czekitout.convert.to_pair_of_floats(**kwargs)
         except:
-            raise TypeError(_check_and_convert_limits_v1_err_msg_1)
+            err_msg = globals()[current_func_name+"_err_msg_1"]
+            raise TypeError(err_msg)
+
+        if limits[0] == limits[1]:
+            err_msg = globals()[current_func_name+"_err_msg_1"]
+            raise ValueError(err_msg)
+    else:
+        if input_signal is not None:
+            u_coords = _calc_u_coords_1d(signal=input_signal)
+            u_i = np.amin(u_coords)
+            u_f = np.amax(u_coords)
+            limits = (u_i, u_f)
+        else:
+            limits = obj
 
     return limits
 
 
 
-def _check_and_convert_normalize(ctor_params):
-    normalize = czekitout.convert.to_bool(ctor_params["normalize"], "normalize")
+def _calc_u_coords_1d(signal):
+    offset = signal.axes_manager[-1].offset
+    scale = signal.axes_manager[-1].scale
+    size = signal.axes_manager[-1].size
+    u_coords = offset + scale*np.arange(size)
 
-    return normalize
+    return u_coords
 
 
 
 def _pre_serialize_limits(limits):
-    serializable_rep = limits
-    
-    return serializable_rep
-
-
-
-def _pre_serialize_normalize(normalize):
-    serializable_rep = normalize
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
 
@@ -1264,6 +1876,25 @@ def _de_pre_serialize_limits(serializable_rep):
 
 
 
+def _check_and_convert_normalize(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    kwargs = {"obj": params[obj_name], "obj_name": obj_name}
+    normalize = czekitout.convert.to_bool(**kwargs)
+
+    return normalize
+
+
+
+def _pre_serialize_normalize(normalize):
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
+    
+    return serializable_rep
+
+
+
 def _de_pre_serialize_normalize(serializable_rep):
     normalize = serializable_rep
 
@@ -1271,8 +1902,13 @@ def _de_pre_serialize_normalize(serializable_rep):
 
 
 
-class OptionalCumulative1dIntegrationParams(
-        fancytypes.PreSerializableAndUpdatable):
+_default_limits = None
+_default_normalize = False
+
+
+
+_cls_alias = fancytypes.PreSerializableAndUpdatable
+class OptionalCumulative1dIntegrationParams(_cls_alias):
     r"""The set of optional parameters for the function
     :func:`empix.cumulatively_integrate_1d`.
 
@@ -1288,16 +1924,34 @@ class OptionalCumulative1dIntegrationParams(
     :math:`F_{\mathbf{m}}\left(u\right)` as
 
     .. math ::
-	\text{CDF}_{\text{1D}}\left(u\right)&=\int_{u_{i}}^{u}du^{\prime}\,
-        F_{\mathbf{m}}\left(u^{\prime}\right),
-        \\&\quad u\in\left[\min\left(u_{i},u_{f}\right),
+        \text{CDF}_{\text{1D}}\left(u\right)&=\frac{1}{\Gamma}
+        \int_{u_{i}}^{u}du^{\prime}\,F_{\mathbf{m}}\left(u^{\prime}\right),
+        \\&\quad 
+        u\in\left[\min\left(u_{i},u_{f}\right),
         \max\left(u_{i},u_{f}\right)\right],
         :label: cumulative_integral_1d__1
 
-    where :math:`u_i` and :math:`u_f` specify the interval over which cumulative
+    where
+
+    .. math ::
+        \Gamma=\begin{cases}
+        1, & \text{if }\mathcal{N}\le 10^{-10} \text{ or }
+        \text{normalize}=\text{False},
+        \\\left|\int_{u_{i}}^{u_{f}}du^{\prime}\,
+        F_{\mathbf{m}}\left(u^{\prime}\right)\right|, & \text{otherwise},
+        \end{cases}
+        :label: Gamma_of_cumulative_integral_1d__1
+
+    .. math ::
+        \mathcal{N}=\left|\int_{u_{i}}^{u_{f}}du^{\prime}
+        \,F_{\mathbf{m}}\left(u^{\prime}\right)\right|,
+        :label: N_of_cumulative_integral_1d__1
+
+    :math:`u_i` and :math:`u_f` specify the interval over which cumulative
     integration is performed, the interval being
     :math:`\left[\min\left(u_{i},u_{f}\right),
-    \max\left(u_{i},u_{f}\right)\right]`.
+    \max\left(u_{i},u_{f}\right)\right]`, and ``normalize`` is an optional
+    boolean parameter that determines whether normalization is enabled or not.
 
     Parameters
     ----------
@@ -1318,11 +1972,8 @@ class OptionalCumulative1dIntegrationParams(
         ``input_signal.data[-1]``, where ``input_signal`` is the input
         ``hyperspy`` signal.
     normalize : `bool`, optional
-        If ``normalize`` is set to ``True``, then the cumulative integral is
-        normalized such that
-        :math:`\text{CDF}_{\text{1D}}\left(u=u_f\right)`. Otherwise, if
-        ``normalize`` is set to ``False``, then the cumulative integral is not
-        normalized.
+        The boolean optional parameter referenced in 
+        Eq. :eq:`Gamma_of_cumulative_integral_1d__1`.
     title : `str` | `None`, optional
         If ``title`` is set to ``None``, then the title of the output signal
         ``output_signal`` is set to ``"CDF("+
@@ -1330,74 +1981,140 @@ class OptionalCumulative1dIntegrationParams(
         input ``hyperspy`` signal.  Otherwise, if ``title`` is a `str`, then the
         ``output_signal.metadata.General.title`` is set to the value of 
         ``title``.
+    skip_validation_and_conversion : `bool`, optional
+        Let ``validation_and_conversion_funcs`` and ``core_attrs`` denote the
+        attributes :attr:`~fancytypes.Checkable.validation_and_conversion_funcs`
+        and :attr:`~fancytypes.Checkable.core_attrs` respectively, both of which
+        being `dict` objects.
 
-    Attributes
-    ----------
-    core_attrs : `dict`, read-only
-        A `dict` representation of the core attributes: each `dict` key is a
-        `str` representing the name of a core attribute, and the corresponding
-        `dict` value is the object to which said core attribute is set. The core
-        attributes are the same as the construction parameters, except that 
-        their values might have been updated since construction.
+        Let ``params_to_be_mapped_to_core_attrs`` denote the `dict`
+        representation of the constructor parameters excluding the parameter
+        ``skip_validation_and_conversion``, where each `dict` key ``key`` is a
+        different constructor parameter name, excluding the name
+        ``"skip_validation_and_conversion"``, and
+        ``params_to_be_mapped_to_core_attrs[key]`` would yield the value of the
+        constructor parameter with the name given by ``key``.
+
+        If ``skip_validation_and_conversion`` is set to ``False``, then for each
+        key ``key`` in ``params_to_be_mapped_to_core_attrs``,
+        ``core_attrs[key]`` is set to ``validation_and_conversion_funcs[key]
+        (params_to_be_mapped_to_core_attrs)``.
+
+        Otherwise, if ``skip_validation_and_conversion`` is set to ``True``,
+        then ``core_attrs`` is set to
+        ``params_to_be_mapped_to_core_attrs.copy()``. This option is desired
+        primarily when the user wants to avoid potentially expensive deep copies
+        and/or conversions of the `dict` values of
+        ``params_to_be_mapped_to_core_attrs``, as it is guaranteed that no
+        copies or conversions are made in this case.
 
     """
-    _validation_and_conversion_funcs = \
-        {"limits": _check_and_convert_limits_v1,
-         "num_bins": _check_and_convert_num_bins_v1,
-         "normalize": _check_and_convert_normalize,
-         "title": _check_and_convert_title_v1}
+    ctor_param_names = ("limits", "num_bins", "normalize", "title")
+    kwargs = {"namespace_as_dict": globals(),
+              "ctor_param_names": ctor_param_names}
+    
+    _validation_and_conversion_funcs_ = \
+        fancytypes.return_validation_and_conversion_funcs(**kwargs)
+    _pre_serialization_funcs_ = \
+        fancytypes.return_pre_serialization_funcs(**kwargs)
+    _de_pre_serialization_funcs_ = \
+        fancytypes.return_de_pre_serialization_funcs(**kwargs)
 
-    _pre_serialization_funcs = \
-        {"limits": _pre_serialize_limits,
-         "num_bins": _pre_serialize_num_bins,
-         "normalize": _pre_serialize_normalize,
-         "title": _pre_serialize_title}
+    del ctor_param_names, kwargs
 
-    _de_pre_serialization_funcs = \
-        {"limits": _de_pre_serialize_limits,
-         "num_bins": _de_pre_serialize_num_bins,
-         "normalize": _de_pre_serialize_normalize,
-         "title": _de_pre_serialize_title}
+    
 
     def __init__(self,
-                 limits=None,
-                 num_bins=None,
-                 normalize=False,
-                 title=None):
-        ctor_params = {"limits": limits,
-                       "num_bins": num_bins,
-                       "normalize": normalize,
-                       "title": title}
-        fancytypes.PreSerializableAndUpdatable.__init__(self, ctor_params)
+                 limits=\
+                 _default_limits,
+                 num_bins=\
+                 _default_num_bins,
+                 normalize=\
+                 _default_normalize,
+                 title=\
+                 _default_title,
+                 skip_validation_and_conversion=\
+                 _default_skip_validation_and_conversion):
+        ctor_params = {key: val
+                       for key, val in locals().items()
+                       if (key not in ("self", "__class__"))}
+        kwargs = ctor_params
+        kwargs["skip_cls_tests"] = True
+        fancytypes.PreSerializableAndUpdatable.__init__(self, **kwargs)
 
         return None
 
 
 
-def cumulatively_integrate_1d(input_signal, optional_params=None):
+    @classmethod
+    def get_validation_and_conversion_funcs(cls):
+        validation_and_conversion_funcs = \
+            cls._validation_and_conversion_funcs_.copy()
+
+        return validation_and_conversion_funcs
+
+
+    
+    @classmethod
+    def get_pre_serialization_funcs(cls):
+        pre_serialization_funcs = \
+            cls._pre_serialization_funcs_.copy()
+
+        return pre_serialization_funcs
+
+
+    
+    @classmethod
+    def get_de_pre_serialization_funcs(cls):
+        de_pre_serialization_funcs = \
+            cls._de_pre_serialization_funcs_.copy()
+
+        return de_pre_serialization_funcs
+
+
+
+def cumulatively_integrate_1d(input_signal,
+                              optional_params=_default_optional_params):
     r"""Integrate cumulatively a given input 1D ``hyperspy`` signal.
 
-    This current Python function assumes that the input 1D ``hyperspy`` signal
-    samples from a mathematical
-    function :math:`F_{\mathbf{m}}\left(u\right)` which is piecewise continuous
-    in :math:`u`, where :math:`u` is the signal space coordinate of the input
-    signal, and :math:`\mathbf{m}` is a vector of integers representing the
-    navigation indices of the input signal. The Python function approximates the
-    cumulative integral of :math:`F_{\mathbf{m}}\left(u\right)` given the input
-    signal. We define the cumulative integral of
-    :math:`F_{\mathbf{m}}\left(u\right)` as
+    This Python function assumes that the input 1D ``hyperspy`` signal samples
+    from a mathematical function :math:`F_{\mathbf{m}}\left(u\right)` which is
+    piecewise continuous in :math:`u`, where :math:`u` is the signal space
+    coordinate of the input signal, and :math:`\mathbf{m}` is a vector of
+    integers representing the navigation indices of the input signal. The Python
+    function approximates the cumulative integral of
+    :math:`F_{\mathbf{m}}\left(u\right)` given the input signal. We define the
+    cumulative integral of :math:`F_{\mathbf{m}}\left(u\right)` as
 
     .. math ::
-	\text{CDF}_{\text{1D}}\left(u\right)&=\int_{u_{i}}^{u}du^{\prime}\,
-        F_{\mathbf{m}}\left(u^{\prime}\right),
-        \\&\quad u\in\left[\min\left(u_{i},u_{f}\right),
+        \text{CDF}_{\text{1D}}\left(u\right)&=\frac{1}{\Gamma}
+        \int_{u_{i}}^{u}du^{\prime}\,F_{\mathbf{m}}\left(u^{\prime}\right),
+        \\&\quad 
+        u\in\left[\min\left(u_{i},u_{f}\right),
         \max\left(u_{i},u_{f}\right)\right],
         :label: cumulative_integral_1d__2
 
-    where :math:`u_i` and :math:`u_f` specify the interval over which cumulative
+    where
+
+    .. math ::
+        \Gamma=\begin{cases}
+        1, & \text{if }\mathcal{N}\le 10^{-10} \text{ or }
+        \text{normalize}=\text{False},
+        \\\left|\int_{u_{i}}^{u_{f}}du^{\prime}\,
+        F_{\mathbf{m}}\left(u^{\prime}\right)\right|, & \text{otherwise},
+        \end{cases}
+        :label: Gamma_of_cumulative_integral_1d__2
+
+    .. math ::
+        \mathcal{N}=\left|\int_{u_{i}}^{u_{f}}du^{\prime}
+        \,F_{\mathbf{m}}\left(u^{\prime}\right)\right|,
+        :label: N_of_cumulative_integral_1d__2
+
+    :math:`u_i` and :math:`u_f` specify the interval over which cumulative
     integration is performed, the interval being
     :math:`\left[\min\left(u_{i},u_{f}\right),
-    \max\left(u_{i},u_{f}\right)\right]`.
+    \max\left(u_{i},u_{f}\right)\right]`, and ``normalize`` is an optional
+    boolean parameter that determines whether normalization is enabled or not.
 
     Parameters
     ----------
@@ -1413,116 +2130,90 @@ def cumulatively_integrate_1d(input_signal, optional_params=None):
     Returns
     -------
     output_signal : :class:`hyperspy._signals.signal1d.Signal1D` | :class:`hyperspy._signals.complex_signal1d.ComplexSignal1D`
-        The output ``hyperspy`` signal that samples the annular integral of the
-        input signal ``input_signal``. Note that except for the title, the
-        metadata of the output signal is determined from the metadata of the
-        input signal.
+        The output ``hyperspy`` signal that samples the cumulative integral of 
+        the input signal ``input_signal``. Note that the metadata of the input 
+        signal is copied over to the output signal, with the title being 
+        overwritten.
 
     """
-    _check_1D_input_signal(input_signal)
-    limits, num_bins, normalize, title = \
-        _check_and_convert_optional_params_v2(optional_params, input_signal)
-    if title is None:
-        title = _default_title(input_signal, "CDF(", ")")
+    params = locals()
+    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    for param_name in params:
+        func_name = "_check_and_convert_" + param_name
+        func_alias = globals()[func_name]
+        params[param_name] = func_alias(params)
 
-    u_coords = _u_coords_1d(input_signal)
-    beg_u_coord_idx, end_u_coord_idx = _beg_and_end_u_coord_indices(u_coords,
-                                                                    limits)
-
-    navigation_dims = input_signal.data.shape[:-1]
-    output_data_shape = list(navigation_dims) + [num_bins]
-    output_data = np.zeros(output_data_shape, dtype=input_signal.data.dtype)
-
-    num_patterns = int(np.prod(navigation_dims))
-    for pattern_idx in range(num_patterns):
-        navigation_indices = np.unravel_index(pattern_idx, navigation_dims)
-        input_datasubset = input_signal.data[navigation_indices]
-            
-        kwargs = {"input_datasubset": input_datasubset,
-                  "u_coords": u_coords,
-                  "beg_u_coord_idx": beg_u_coord_idx,
-                  "end_u_coord_idx": end_u_coord_idx,
-                  "limits": limits,
-                  "num_bins": num_bins,
-                  "normalize": normalize}
-        bin_coords, output_datasubset = \
-            _cumulatively_integrate_input_datasubset(**kwargs)
-        output_data[navigation_indices] = output_datasubset
-        
-    metadata = {"General": {"title": title}, "Signal": dict()}
-    if np.isrealobj(output_data):
-        output_signal = hyperspy.signals.Signal1D(data=output_data,
-                                                  metadata=metadata)
-    else:
-        output_signal = hyperspy.signals.ComplexSignal1D(data=output_data,
-                                                         metadata=metadata)
-    _update_output_signal_axes_v1(output_signal, bin_coords, input_signal)
+    func_name = "_" + inspect.stack()[0][3]
+    func_alias = globals()[func_name]
+    kwargs = params
+    del kwargs["action_to_apply_to_input_signal"]
+    output_signal = func_alias(**kwargs)
 
     return output_signal
 
 
 
-def _check_1D_input_signal(input_signal):
-    accepted_types = (hyperspy.signals.Signal1D,
-                      hyperspy.signals.ComplexSignal1D)
-    kwargs = {"obj": input_signal,
-              "obj_name": "input_signal",
-              "accepted_types": accepted_types}
-    czekitout.check.if_instance_of_any_accepted_types(**kwargs)
+def _cumulatively_integrate_1d(input_signal, optional_params):
+    optional_params_core_attrs = optional_params.get_core_attrs(deep_copy=False)
+    limits = optional_params_core_attrs["limits"]
+    num_bins = optional_params_core_attrs["num_bins"]
+    normalize = optional_params_core_attrs["normalize"]
+    title = optional_params_core_attrs["title"]
 
-    return input_signal
+    u_coords = \
+        _calc_u_coords_1d(signal=input_signal)
+    beg_u_coord_idx, end_u_coord_idx = \
+        _calc_beg_and_end_u_coord_indices(u_coords, limits)
+
+    navigation_dims = input_signal.data.shape[:-1]
+    output_signal_data_shape = navigation_dims + (num_bins,)
+    output_signal_data = np.zeros(output_signal_data_shape,
+                                  dtype=input_signal.data.dtype)
+
+    num_patterns = int(np.prod(navigation_dims))
+    for pattern_idx in range(num_patterns):
+        navigation_indices = np.unravel_index(pattern_idx, navigation_dims)
+        input_signal_datasubset = input_signal.data[navigation_indices]
+            
+        kwargs = \
+            {"input_signal_datasubset": input_signal_datasubset,
+             "u_coords": u_coords,
+             "beg_u_coord_idx": beg_u_coord_idx,
+             "end_u_coord_idx": end_u_coord_idx,
+             "limits": limits,
+             "num_bins": num_bins,
+             "normalize": normalize}
+        bin_coords, output_signal_datasubset = \
+            _cumulatively_integrate_input_signal_datasubset(**kwargs)
+        output_signal_data[navigation_indices] = \
+            output_signal_datasubset
+        
+    kwargs = {"data": output_signal_data,
+              "metadata": input_signal.metadata.as_dictionary()}
+    if np.isrealobj(output_signal_data):
+        output_signal = hyperspy.signals.Signal1D(**kwargs)
+    else:
+        output_signal = hyperspy.signals.ComplexSignal1D(**kwargs)
+    output_signal.metadata.set_item("General.title", title)
+        
+    kwargs = {"input_signal": input_signal,
+              "optional_params": optional_params,
+              "bin_coords": bin_coords,
+              "output_signal": output_signal}
+    _update_output_signal_axes(**kwargs)
+
+    return output_signal
 
 
 
-def _check_and_convert_optional_params_v2(optional_params, input_signal):
-    if optional_params is None:
-        optional_params = OptionalCumulative1dIntegrationParams()
-    if not isinstance(optional_params, OptionalCumulative1dIntegrationParams):
-        raise TypeError(_check_and_convert_optional_params_v2_err_msg_1)
-
-    limits = optional_params.core_attrs["limits"]
-    limits = _check_and_convert_limits_v2(limits, input_signal)
-
-    num_bins = optional_params.core_attrs["num_bins"]
-    num_bins = _check_and_convert_num_bins_v2(num_bins, input_signal)
-
-    normalize = optional_params.core_attrs["normalize"]
-
-    title = optional_params.core_attrs["title"]
-
-    return limits, num_bins, normalize, title
-
-
-
-def _check_and_convert_limits_v2(limits, signal):
-    if limits is None:
-        u_coords = _u_coords_1d(signal)
-        u_i = np.amin(u_coords)
-        u_f = np.amax(u_coords)
-        limits = (u_i, u_f)
-
-    return limits
-
-
-
-def _u_coords_1d(signal):
-    offset = signal.axes_manager[-1].offset
-    scale = signal.axes_manager[-1].scale
-    size = signal.axes_manager[-1].size
-    u_coords = offset + scale * np.arange(size)
-
-    return u_coords
-
-
-
-def _beg_and_end_u_coord_indices(u_coords, limits):
-    du = u_coords[1] - u_coords[0]
+def _calc_beg_and_end_u_coord_indices(u_coords, limits):
+    d_u = u_coords[1]-u_coords[0]
     
     idx_1 = np.abs(u_coords-min(limits)).argmin()
-    idx_1 = max(idx_1-1, 0) if du > 0 else min(idx_1+1, u_coords.size-1)
+    idx_1 = max(idx_1-1, 0) if (d_u > 0) else min(idx_1+1, u_coords.size-1)
     
     idx_2 = np.abs(u_coords-max(limits)).argmin()
-    idx_2 = min(idx_2+1, u_coords.size-1) if du > 0 else max(idx_2-1, 0)
+    idx_2 = min(idx_2+1, u_coords.size-1) if d_u > 0 else max(idx_2-1, 0)
     
     beg_u_coord_idx = min(idx_1, idx_2)
     end_u_coord_idx = max(idx_1, idx_2)
@@ -1531,97 +2222,77 @@ def _beg_and_end_u_coord_indices(u_coords, limits):
 
 
 
-def _cumulatively_integrate_input_datasubset(input_datasubset,
-                                             u_coords,
-                                             beg_u_coord_idx,
-                                             end_u_coord_idx,
-                                             limits,
-                                             num_bins,
-                                             normalize):
-    du = u_coords[1] - u_coords[0]
+def _cumulatively_integrate_input_signal_datasubset(input_signal_datasubset,
+                                                    u_coords,
+                                                    beg_u_coord_idx,
+                                                    end_u_coord_idx,
+                                                    limits,
+                                                    num_bins,
+                                                    normalize):
+    d_u = u_coords[1]-u_coords[0]
     x = u_coords[beg_u_coord_idx:end_u_coord_idx+1]
-    y = input_datasubset[beg_u_coord_idx:end_u_coord_idx+1]
+    y = input_signal_datasubset[beg_u_coord_idx:end_u_coord_idx+1]
 
-    if du < 0:
+    if d_u < 0:
         x = x[::-1]
         y = y[::-1]
 
-    F = scipy.interpolate.interp1d(x, y,
-                                   kind="cubic", copy=False,
-                                   bounds_error=False, fill_value=0,
-                                   assume_sorted=True)
+    kwargs = {"x": x,
+              "y": y,
+              "kind": "cubic",
+              "copy": False,
+              "bounds_error": False,
+              "fill_value": 0,
+              "assume_sorted": True}
+    F = scipy.interpolate.interp1d(**kwargs)
 
     u_i, u_f = limits
     bin_coords = np.linspace(u_i, u_f, num_bins)
     F_data = F(bin_coords)
 
-    output_datasubset = abs(du) * np.cumsum(F_data)
+    output_signal_datasubset = (bin_coords[1]-bin_coords[0]) * np.cumsum(F_data)
+
+    tol = 1e-10
+    N = abs(output_signal_datasubset[-1].item())
+    normalize = (not bool((N <= tol) + (normalize == False)))
+    Gamma = normalize*(N-1.0) + 1.0
+
+    output_signal_datasubset /= Gamma
+
+    return bin_coords, output_signal_datasubset
+
+
+
+def _check_and_convert_window_dims(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    obj = params[obj_name]
+
+    param_name = "input_signal"
+    input_signal = params.get(param_name, None)
     
-    if normalize:
-        output_datasubset /= output_datasubset[-1]
-
-    return bin_coords, output_datasubset
-
-
-
-def _check_and_convert_window_dims_v1(ctor_params):
-    window_dims = ctor_params["window_dims"]
-    
-    if window_dims is not None:
+    if obj is not None:
         try:
-            window_dims = \
-                czekitout.convert.to_pair_of_positive_ints(window_dims,
-                                                           "window_dims")
+            kwargs = {"obj": obj, "obj_name": obj_name}
+            window_dims = czekitout.convert.to_pair_of_positive_ints(**kwargs)
         except:
-            raise TypeError(_check_and_convert_window_dims_v1_err_msg_1)
+            err_msg = globals()[current_func_name+"_err_msg_1"]
+            raise TypeError(err_msg)
+    else:
+        if input_signal is not None:
+            N_v, N_h = input_signal.data.shape[-2:]
+            window_dims = (N_h, N_v)
+        else:
+            window_dims = obj
 
     return window_dims
 
 
 
-def _check_and_convert_pad_mode(ctor_params):
-    pad_mode = ctor_params["pad_mode"]
-    
-    if pad_mode is not None:
-        try:
-            pad_mode = czekitout.convert.to_str_from_str_like(pad_mode,
-                                                              "pad_mode")
-        except:
-            raise TypeError(_check_and_convert_pad_mode_err_msg_1)
-
-        accepted_values = ("no-padding", "wrap", "zeros")
-        if pad_mode not in accepted_values:
-            raise ValueError(_check_and_convert_pad_mode_err_msg_1)
-
-    return pad_mode
-
-
-
-def _check_and_convert_apply_symmetric_mask(ctor_params):
-    apply_symmetric_mask = \
-        czekitout.convert.to_bool(ctor_params["apply_symmetric_mask"],
-                                  "apply_symmetric_mask")
-
-    return apply_symmetric_mask
-
-
-
 def _pre_serialize_window_dims(window_dims):
-    serializable_rep = window_dims
-    
-    return serializable_rep
-
-
-
-def _pre_serialize_pad_mode(pad_mode):
-    serializable_rep = pad_mode
-    
-    return serializable_rep
-
-
-
-def _pre_serialize_apply_symmetric_mask(apply_symmetric_mask):
-    serializable_rep = apply_symmetric_mask
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
 
@@ -1634,10 +2305,53 @@ def _de_pre_serialize_window_dims(serializable_rep):
 
 
 
+def _check_and_convert_pad_mode(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    obj = params[obj_name]
+
+    kwargs = {"obj": obj, "obj_name": obj_name}
+    pad_mode = czekitout.convert.to_str_from_str_like(**kwargs)
+
+    kwargs["accepted_strings"] = ("no-padding", "wrap", "zeros")
+    czekitout.check.if_one_of_any_accepted_strings(**kwargs)
+
+    return pad_mode
+
+
+
+def _pre_serialize_pad_mode(pad_mode):
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
+    
+    return serializable_rep
+
+
+
 def _de_pre_serialize_pad_mode(serializable_rep):
     pad_mode = serializable_rep
 
     return pad_mode
+
+
+
+def _check_and_convert_apply_symmetric_mask(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    kwargs = {"obj": params[obj_name], "obj_name": obj_name}
+    apply_symmetric_mask = czekitout.convert.to_bool(**kwargs)
+
+    return apply_symmetric_mask
+
+
+
+def _pre_serialize_apply_symmetric_mask(apply_symmetric_mask):
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
+    
+    return serializable_rep
 
 
 
@@ -1648,7 +2362,14 @@ def _de_pre_serialize_apply_symmetric_mask(serializable_rep):
 
 
 
-class OptionalCroppingParams(fancytypes.PreSerializableAndUpdatable):
+_default_window_dims = None
+_default_pad_mode = "no-padding"
+_default_apply_symmetric_mask = False
+
+
+
+_cls_alias = fancytypes.PreSerializableAndUpdatable
+class OptionalCroppingParams(_cls_alias):
     r"""The set of optional parameters for the function :func:`empix.crop`.
 
     The Python function :func:`empix.crop` applies a series of optional
@@ -1686,13 +2407,21 @@ class OptionalCroppingParams(fancytypes.PreSerializableAndUpdatable):
     ----------
     center : `array_like` (`float`, shape=(2,)) | `None`, optional
         If ``center`` is set to ``None``, then the center of the cropping window
-        is set to the signal space coordinates corresponding to the center
-        signal space pixel of the original input signal. Otherwise, if
-        ``center`` is set to a pair of floating-point numbers, then
-        ``center[0]`` and ``center[1]`` specify the horizontal and vertical
-        signal space coordinates of the center of the cropping window prior to
-        the subpixel shift to the nearest pixel, in the same units of the
-        corresponding axes of the input signal
+        is set to the signal space coordinates corresponding to the pixel that
+        is ``(h_dim+1)//2 -1`` pixels to the right of the upper left corner in
+        signal space, and ``(v_dim+1)//2-1`` pixels below the same corner, where
+        ``h_dim`` and ``v_dim`` are the horizontal and vertical dimensions of
+        the signal space. Otherwise, if ``center`` is set to a pair of
+        floating-point numbers, then ``center[0]`` and ``center[1]`` specify the
+        horizontal and vertical signal space coordinates of the center of the
+        cropping window prior to the subpixel shift to the nearest pixel, in the
+        same units of the corresponding axes of the input signal.
+
+        We define the center of the cropping window to be ``(N_W_h+1)//2 - 1``
+        pixels to the right of the upper left corner of the cropping window, and
+        ``(N_W_v+1)//2 - 1`` pixels below the same corner, where ``N_W_h`` and
+        ``N_W_v`` are the horizontal and vertical dimensions of the cropping 
+        window in units of pixels.
     window_dims : `array_like` (`int`, shape=(2,)) | `None`, optional
         If ``window_dims`` is set to ``None``, then the dimensions of the
         cropping window are set to the dimensions of the signal space of the
@@ -1727,66 +2456,114 @@ class OptionalCroppingParams(fancytypes.PreSerializableAndUpdatable):
         input ``hyperspy`` signal.  Otherwise, if ``title`` is a `str`, then the
         ``output_signal.metadata.General.title`` is set to the value of
         ``title``.
+    skip_validation_and_conversion : `bool`, optional
+        Let ``validation_and_conversion_funcs`` and ``core_attrs`` denote the
+        attributes :attr:`~fancytypes.Checkable.validation_and_conversion_funcs`
+        and :attr:`~fancytypes.Checkable.core_attrs` respectively, both of which
+        being `dict` objects.
 
-    Attributes
-    ----------
-    core_attrs : `dict`, read-only
-        A `dict` representation of the core attributes: each `dict` key is a
-        `str` representing the name of a core attribute, and the corresponding
-        `dict` value is the object to which said core attribute is set. The core
-        attributes are the same as the construction parameters, except that 
-        their values might have been updated since construction.
+        Let ``params_to_be_mapped_to_core_attrs`` denote the `dict`
+        representation of the constructor parameters excluding the parameter
+        ``skip_validation_and_conversion``, where each `dict` key ``key`` is a
+        different constructor parameter name, excluding the name
+        ``"skip_validation_and_conversion"``, and
+        ``params_to_be_mapped_to_core_attrs[key]`` would yield the value of the
+        constructor parameter with the name given by ``key``.
+
+        If ``skip_validation_and_conversion`` is set to ``False``, then for each
+        key ``key`` in ``params_to_be_mapped_to_core_attrs``,
+        ``core_attrs[key]`` is set to ``validation_and_conversion_funcs[key]
+        (params_to_be_mapped_to_core_attrs)``.
+
+        Otherwise, if ``skip_validation_and_conversion`` is set to ``True``,
+        then ``core_attrs`` is set to
+        ``params_to_be_mapped_to_core_attrs.copy()``. This option is desired
+        primarily when the user wants to avoid potentially expensive deep copies
+        and/or conversions of the `dict` values of
+        ``params_to_be_mapped_to_core_attrs``, as it is guaranteed that no
+        copies or conversions are made in this case.
 
     """
-    _validation_and_conversion_funcs = \
-        {"center": _check_and_convert_center_v1,
-         "window_dims": _check_and_convert_window_dims_v1,
-         "pad_mode": _check_and_convert_pad_mode,
-         "apply_symmetric_mask": _check_and_convert_apply_symmetric_mask,
-         "title": _check_and_convert_title_v1}
+    ctor_param_names = ("center",
+                        "window_dims",
+                        "pad_mode",
+                        "apply_symmetric_mask",
+                        "title")
+    kwargs = {"namespace_as_dict": globals(),
+              "ctor_param_names": ctor_param_names}
+    
+    _validation_and_conversion_funcs_ = \
+        fancytypes.return_validation_and_conversion_funcs(**kwargs)
+    _pre_serialization_funcs_ = \
+        fancytypes.return_pre_serialization_funcs(**kwargs)
+    _de_pre_serialization_funcs_ = \
+        fancytypes.return_de_pre_serialization_funcs(**kwargs)
 
-    _pre_serialization_funcs = \
-        {"center": _pre_serialize_center,
-         "window_dims": _pre_serialize_window_dims,
-         "pad_mode": _pre_serialize_pad_mode,
-         "apply_symmetric_mask": _pre_serialize_apply_symmetric_mask,
-         "title": _pre_serialize_title}
+    del ctor_param_names, kwargs
 
-    _de_pre_serialization_funcs = \
-        {"center": _de_pre_serialize_center,
-         "window_dims": _de_pre_serialize_window_dims,
-         "pad_mode": _de_pre_serialize_pad_mode,
-         "apply_symmetric_mask": _de_pre_serialize_apply_symmetric_mask,
-         "title": _de_pre_serialize_title}
+    
 
     def __init__(self,
-                 center=None,
-                 window_dims=None,
-                 pad_mode="no-padding",
-                 apply_symmetric_mask=False,
-                 title=None):
-        ctor_params = {"center": center,
-                       "window_dims": window_dims,
-                       "pad_mode": pad_mode,
-                       "apply_symmetric_mask": apply_symmetric_mask,
-                       "title": title}
-        fancytypes.PreSerializableAndUpdatable.__init__(self, ctor_params)
+                 center=\
+                 _default_center,
+                 window_dims=\
+                 _default_window_dims,
+                 pad_mode=\
+                 _default_pad_mode,
+                 apply_symmetric_mask=\
+                 _default_apply_symmetric_mask,
+                 title=\
+                 _default_title,
+                 skip_validation_and_conversion=\
+                 _default_skip_validation_and_conversion):
+        ctor_params = {key: val
+                       for key, val in locals().items()
+                       if (key not in ("self", "__class__"))}
+        kwargs = ctor_params
+        kwargs["skip_cls_tests"] = True
+        fancytypes.PreSerializableAndUpdatable.__init__(self, **kwargs)
 
         return None
 
 
 
-def crop(input_signal, optional_params=None):
+    @classmethod
+    def get_validation_and_conversion_funcs(cls):
+        validation_and_conversion_funcs = \
+            cls._validation_and_conversion_funcs_.copy()
+
+        return validation_and_conversion_funcs
+
+
+    
+    @classmethod
+    def get_pre_serialization_funcs(cls):
+        pre_serialization_funcs = \
+            cls._pre_serialization_funcs_.copy()
+
+        return pre_serialization_funcs
+
+
+    
+    @classmethod
+    def get_de_pre_serialization_funcs(cls):
+        de_pre_serialization_funcs = \
+            cls._de_pre_serialization_funcs_.copy()
+
+        return de_pre_serialization_funcs
+
+
+
+def crop(input_signal, optional_params=_default_optional_params):
     r"""Crop a given input 2D ``hyperspy`` signal.
 
-    This current Python function applies a series of optional transformations to
-    a given input 2D ``hyperspy`` signal. Let us denote the input 2D
-    ``hyperspy`` signal by :math:`F_{\mathbf{m}; l_x, l_y}`, where :math:`l_x`
-    and :math:`l_y` are integers indexing the sampled horizontal and vertical
-    coordinates respectively in the signal space of the input signal, and
-    :math:`\mathbf{m}` is a vector of integers representing the navigation
-    indices of the input signal. The Python function effectively does the
-    following:
+    This Python function applies a series of optional transformations to a given
+    input 2D ``hyperspy`` signal. Let us denote the input 2D ``hyperspy`` signal
+    by :math:`F_{\mathbf{m}; l_x, l_y}`, where :math:`l_x` and :math:`l_y` are
+    integers indexing the sampled horizontal and vertical coordinates
+    respectively in the signal space of the input signal, and :math:`\mathbf{m}`
+    is a vector of integers representing the navigation indices of the input
+    signal. The Python function effectively does the following:
 
     1. Copies the input signal and optionally pads the copy along the horizontal
     and vertical axes in signal space according to the parameter ``pad_mode``;
@@ -1825,401 +2602,215 @@ def crop(input_signal, optional_params=None):
     -------
     output_signal : :class:`hyperspy._signals.signal2d.Signal2D` | :class:`hyperspy._signals.complex_signal2d.ComplexSignal2D`
         The output ``hyperspy`` signal that results from the applied
-        transformations, described above. Note that except for the title, the
-        metadata of the output signal is determined from the metadata of the
-        input signal.
+        transformations, described above. Note that the metadata of the input 
+        signal is copied over to the output signal, with the title being 
+        overwritten.
 
     """
-    _check_2D_input_signal(input_signal)
-    center, window_dims, pad_mode, apply_symmetric_mask, title = \
-        _check_and_convert_optional_params_v3(optional_params, input_signal)
-    if title is None:
-        title = _default_title(input_signal, "Cropped ", "")
+    params = locals()
+    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    for param_name in params:
+        func_name = "_check_and_convert_" + param_name
+        func_alias = globals()[func_name]
+        params[param_name] = func_alias(params)
 
-    temp_cropping_params = _temp_cropping_params(input_signal,
-                                                 center,
-                                                 window_dims,
-                                                 pad_mode,
-                                                 apply_symmetric_mask)
-
-    navigation_dims = input_signal.data.shape[:-2]
-    navigation_indices = np.unravel_index(0, navigation_dims)
-    input_datasubset = input_signal.data[navigation_indices]
-    output_datasubset = _crop_datasubset(input_datasubset, temp_cropping_params)
-    output_data_shape = list(navigation_dims) + list(output_datasubset.shape)
-    output_data = np.zeros(output_data_shape, dtype=input_signal.data.dtype)
-    
-    if np.prod(output_data.shape) == 0:
-        raise ValueError(_crop_err_msg_1)
-
-    output_data[navigation_indices] = output_datasubset
-    num_patterns = int(np.prod(navigation_dims))
-    for pattern_idx in range(1, num_patterns):
-        navigation_indices = np.unravel_index(pattern_idx, navigation_dims)
-        input_datasubset = input_signal.data[navigation_indices]
-            
-        kwargs = {"input_datasubset": input_datasubset,
-                  "temp_cropping_params": temp_cropping_params}
-        output_datasubset = _crop_datasubset(**kwargs)
-        output_data[navigation_indices] = output_datasubset
-        
-    metadata = {"General": {"title": title}, "Signal": dict()}
-    if np.isrealobj(output_data):
-        output_signal = hyperspy.signals.Signal2D(data=output_data,
-                                                  metadata=metadata)
-    else:
-        output_signal = hyperspy.signals.ComplexSignal2D(data=output_data,
-                                                         metadata=metadata)
-
-    output_axes_offsets = temp_cropping_params["output_axes_offsets"]
-    _update_output_signal_axes_v2(output_signal,
-                                  input_signal,
-                                  output_axes_offsets)
+    func_name = "_" + inspect.stack()[0][3]
+    func_alias = globals()[func_name]
+    kwargs = params
+    del kwargs["action_to_apply_to_input_signal"]
+    output_signal = func_alias(**kwargs)
 
     return output_signal
 
 
 
-def _check_and_convert_optional_params_v3(optional_params, input_signal):
-    if optional_params is None:
-        optional_params = OptionalCroppingParams()
-    if not isinstance(optional_params, OptionalCroppingParams):
-        raise TypeError(_check_and_convert_optional_params_v3_err_msg_1)
+def _crop(input_signal, optional_params):
+    current_func_name = inspect.stack()[0][3]
 
-    center = optional_params.core_attrs["center"]
-    center = _check_and_convert_center_v3(center, input_signal)
+    optional_params_core_attrs = optional_params.get_core_attrs(deep_copy=False)
+    title = optional_params_core_attrs["title"]
 
-    window_dims = optional_params.core_attrs["window_dims"]
-    window_dims = _check_and_convert_window_dims_v2(window_dims, input_signal)
-
-    pad_mode = optional_params.core_attrs["pad_mode"]
-
-    apply_symmetric_mask = optional_params.core_attrs["apply_symmetric_mask"]
-
-    title = optional_params.core_attrs["title"]
-
-    return center, window_dims, pad_mode, apply_symmetric_mask, title
-
-
-
-def _check_and_convert_center_v3(center, signal):
-    if center is None:
-        n_v, n_h = signal.data.shape[-2:]
+    func_alias = _calc_input_signal_datasubset_cropping_params
+    input_signal_datasubset_cropping_params = func_alias(input_signal,
+                                                         optional_params)
     
-        h_scale = signal.axes_manager[-2].scale
-        v_scale = signal.axes_manager[-1].scale
-
-        h_offset = signal.axes_manager[-2].offset
-        v_offset = signal.axes_manager[-1].offset
-
-        center = (h_offset + h_scale*((n_h-1)//2),
-                  v_offset + v_scale*((n_v-1)//2))
-
-    return center
-
-
-
-def _check_and_convert_window_dims_v2(window_dims, signal):
-    if window_dims is None:
-        n_v, n_h = signal.data.shape[-2:]
-        window_dims = (n_h, n_v)
-
-    return window_dims
-
-
-
-def _temp_cropping_params(input_signal,
-                          center,
-                          window_dims,
-                          pad_mode,
-                          apply_symmetric_mask):
     navigation_dims = input_signal.data.shape[:-2]
-    navigation_indices = np.unravel_index(0, navigation_dims)
-    input_datasubset = input_signal.data[navigation_indices]
+    num_patterns = int(np.prod(navigation_dims))
 
-    center_in_pixel_coords = _center_in_pixel_coords(input_signal, center)
-    
-    pad_width_1, multi_dim_slice_1 = \
-        _pad_width_1_and_multi_dim_slice_1(input_datasubset,
-                                           center_in_pixel_coords,
-                                           window_dims,
-                                           pad_mode)
-    pad_width_2, multi_dim_slice_2 = \
-        _pad_width_2_and_multi_dim_slice_2(input_datasubset,
-                                           center_in_pixel_coords,
-                                           window_dims,
-                                           pad_mode)
-    mode = "wrap" if pad_mode == "wrap" else "constant"
-    symmetric_mask = _symmetric_mask(input_datasubset,
-                                     center_in_pixel_coords,
-                                     window_dims,
-                                     pad_mode,
-                                     apply_symmetric_mask)
-    output_axes_offsets = _offsets_after_cropping(input_signal,
-                                                  center_in_pixel_coords,
-                                                  window_dims,
-                                                  pad_mode)
-
-    temp_cropping_params = {"pad_width_1": pad_width_1,
-                            "pad_width_2": pad_width_2,
-                            "multi_dim_slice_1": multi_dim_slice_1,
-                            "multi_dim_slice_2": multi_dim_slice_2,
-                            "mode": mode,
-                            "symmetric_mask": symmetric_mask,
-                            "output_axes_offsets": output_axes_offsets}
-
-    return temp_cropping_params
-
-
-
-def _center_in_pixel_coords(input_signal, center):
-    h_scale = input_signal.axes_manager[-2].scale
-    v_scale = input_signal.axes_manager[-1].scale
-
-    h_offset = input_signal.axes_manager[-2].offset
-    v_offset = input_signal.axes_manager[-1].offset
-
-    center_in_pixel_coords = np.round(((center[0] - h_offset) / h_scale,
-                                       (center[1] - v_offset) / v_scale))
-
-    return center_in_pixel_coords
-
-
-
-def _pad_width_1_and_multi_dim_slice_1(input_datasubset,
-                                       center_in_pixel_coords,
-                                       window_dims,
-                                       pad_mode):
-    shift = (center_in_pixel_coords[::-1]
-             - ((np.array(input_datasubset.shape)-1) // 2))
-
-    pad_width_1 = [(0, 0), (0, 0)]
-    multi_dim_slice_1 = [slice(None), slice(None)]
-
-    mode = "wrap" if pad_mode == "wrap" else "constant"
-    
-    for idx in (0, 1):
-        s = int(np.sign(shift[idx]+0.5))
-        n = input_datasubset.shape[idx]
-        c = (n-1)//2
-        L = window_dims[::-1][idx]
-        p = (L-1)//2
-        if pad_mode != "no-padding":
-            pad_width_1[idx] = (0, int(s * shift[idx]))[::s]
-        if s < 0:
-            k = 0 if pad_mode != "no-padding" else max((L-p)-(n-c), 0)
-            end = max(n + pad_width_1[idx][0] + shift[idx] + k, 0)
-            multi_dim_slice_1[idx] = slice(None, int(end))
-        else:
-            k = 0 if pad_mode != "no-padding" else max(p-c, 0)
-            start = max(shift[idx] - k, 0)
-            multi_dim_slice_1[idx] = slice(int(start), None)
-    multi_dim_slice_1 = tuple(multi_dim_slice_1)
-
-    return pad_width_1, multi_dim_slice_1
-
-
-
-def _pad_width_2_and_multi_dim_slice_2(input_datasubset,
-                                       center_in_pixel_coords,
-                                       window_dims,
-                                       pad_mode):
-    pad_width_2 = [(0, 0), (0, 0)]
-    multi_dim_slice_2 = [slice(None), slice(None)]
-
-    shift = (center_in_pixel_coords[::-1]
-             - ((np.array(input_datasubset.shape)-1) // 2))
-
-    dims_diff = window_dims[::-1] - np.array(input_datasubset.shape)
-    
-    for idx in (0, 1):
-        c = (input_datasubset.shape[idx]-1)//2
-        L = window_dims[::-1][idx]
-
-        i = (min(shift[idx], 0)
-             if ((pad_mode == "no-padding") and dims_diff[idx] < 0)
-             else 0)
+    for pattern_idx in range(0, num_patterns):
+        navigation_indices = np.unravel_index(pattern_idx, navigation_dims)
+        input_signal_datasubset = input_signal.data[navigation_indices]
             
-        start = int(max((c+1) - (L//2) - (L%2) + i, 0))
-        stop = int(max((c+1) - (L//2) - (L%2) + i + L, 0))
+        kwargs = {"input_signal_datasubset": \
+                  input_signal_datasubset,
+                  "input_signal_datasubset_cropping_params": \
+                  input_signal_datasubset_cropping_params}
+        output_signal_datasubset = _crop_input_signal_datasubset(**kwargs)
 
-        if dims_diff[idx] > 0:
-            temp = np.array([dims_diff[idx]//2]*2)
-            if dims_diff[idx]%2 == 1:
-                temp += np.array([(input_datasubset.shape[idx]+1)%2,
-                                  (window_dims[::-1][idx]+1)%2])
-            temp = (int(temp[0]), int(temp[1]))
-            pad_width_2[idx] = (0, 0) if pad_mode == "no-padding" else temp
+        if pattern_idx == 0:
+            output_signal_data_shape = (navigation_dims
+                                        + output_signal_datasubset.shape)
+            output_signal_data = np.zeros(output_signal_data_shape,
+                                          dtype=input_signal.data.dtype)
 
-            if pad_mode != "no-padding":
-                start = None
-                stop = None
-                        
-        multi_dim_slice_2[idx] = slice(start, stop)
+            if np.prod(output_signal_data.shape) == 0:
+                err_msg = globals()[current_func_name+"_err_msg_1"]
+                raise ValueError(err_msg)
 
-    multi_dim_slice_2 = tuple(multi_dim_slice_2)
-
-    return pad_width_2, multi_dim_slice_2
-
-
-
-def _symmetric_mask(input_datasubset,
-                    center_in_pixel_coords,
-                    window_dims,
-                    pad_mode,
-                    apply_symmetric_mask):
-    if (pad_mode == "zeros") and apply_symmetric_mask:
-        symmetric_mask = np.ones(window_dims[::-1], dtype=bool)
-        multi_dim_slice = [slice(None), slice(None)]
+        output_signal_data[navigation_indices] = output_signal_datasubset
         
-        for idx in range(2):
-            n = input_datasubset.shape[idx]
-            m = window_dims[::-1][idx]
-        
-            a = m // 2
-            b = ((m-1) // 2) - (m%2)
-            c = center_in_pixel_coords[::-1][idx]
-            c_L = c - (n%2)
-            c_R = c + 1
-            d = min(a, c_L+1, n-c_R)
-        
-            start = b - d + 1
-            stop = start + 2*d + (m%2)
-            multi_dim_slice[idx] = slice(int(start), int(stop))
-        
-        multi_dim_slice = tuple(multi_dim_slice)
-        symmetric_mask[multi_dim_slice] = False
+    kwargs = {"data": output_signal_data,
+              "metadata": input_signal.metadata.as_dictionary()}
+    if np.isrealobj(output_signal_data):
+        output_signal = hyperspy.signals.Signal2D(**kwargs)
     else:
-        symmetric_mask = None
+        output_signal = hyperspy.signals.ComplexSignal2D(**kwargs)
+    output_signal.metadata.set_item("General.title", title)
 
-    return symmetric_mask
+    kwargs = {"input_signal": input_signal,
+              "optional_params": optional_params,
+              "bin_coords": None,
+              "output_signal": output_signal}
+    _update_output_signal_axes(**kwargs)
+
+    return output_signal
 
 
 
-def _offsets_after_cropping(input_signal,
-                            center_in_pixel_coords,
-                            window_dims,
-                            pad_mode):
-    navigation_dims = input_signal.data.shape[:-2]
-    navigation_indices = np.unravel_index(0, navigation_dims)
-    num_axes = len(input_signal.data.shape)
-    input_datasubset = input_signal.data[navigation_indices]
+def _calc_input_signal_datasubset_cropping_params(input_signal,
+                                                  optional_params):
+    optional_params_core_attrs = optional_params.get_core_attrs(deep_copy=False)
+    approximate_crop_window_center = optional_params_core_attrs["center"]
+    crop_window_dims = optional_params_core_attrs["window_dims"]
+    pad_mode = optional_params_core_attrs["pad_mode"]
+    apply_symmetric_mask = optional_params_core_attrs["apply_symmetric_mask"]
 
-    shift = (center_in_pixel_coords[::-1]
-             - ((np.array(input_datasubset.shape)-1) // 2))
+    func_alias = _calc_crop_window_center_in_pixel_coords
+    kwargs = {"input_signal": input_signal,
+              "approximate_crop_window_center": approximate_crop_window_center}
+    crop_window_center_in_pixel_coords = func_alias(**kwargs)
 
-    scales = [input_signal.axes_manager[idx].scale for idx in range(num_axes)]
-    offsets = [input_signal.axes_manager[idx].offset for idx in range(num_axes)]
-    adjusted_center = [offsets[idx] + center_in_pixel_coords[idx]*scales[idx]
-                       for idx in (-2, -1)]
+    kwargs = \
+        {"crop_window_dims": \
+         crop_window_dims,
+         "crop_window_center_in_pixel_coords": \
+         crop_window_center_in_pixel_coords,
+         "pad_mode": \
+         pad_mode,
+         "input_signal": \
+         input_signal,
+         "apply_symmetric_mask": \
+         apply_symmetric_mask}
+    multi_dim_slice_for_cropping, multi_dim_slice_for_masking = \
+        _calc_multi_dim_slices_for_cropping_and_masking(**kwargs)
 
-    for idx in (-2, -1):
-        n = input_datasubset.shape[::-1][idx]
-        c = (n-1)//2
-        L = window_dims[idx]
-        p = (L-1)//2
-        if pad_mode != "no-padding":
-            m = p
+    if pad_mode == "zeros":
+        mask_to_apply_for_crop = np.ones(crop_window_dims[::-1], dtype=bool)
+        mask_to_apply_for_crop[multi_dim_slice_for_masking] = False
+    else:
+        mask_to_apply_for_crop = None
+    
+    input_signal_datasubset_cropping_params = {"multi_dim_slice_for_cropping": \
+                                               multi_dim_slice_for_cropping,
+                                               "mask_to_apply_for_crop": \
+                                               mask_to_apply_for_crop}
+
+    return input_signal_datasubset_cropping_params
+
+
+
+def _calc_multi_dim_slices_for_cropping_and_masking(
+        crop_window_dims,
+        crop_window_center_in_pixel_coords,
+        pad_mode,
+        input_signal,
+        apply_symmetric_mask):
+    num_spatial_dims = len(crop_window_dims)
+
+    multi_dim_slice_for_cropping = tuple()
+    multi_dim_slice_for_masking = tuple()
+    
+    for spatial_dim_idx in range(num_spatial_dims):
+        start = (crop_window_center_in_pixel_coords[spatial_dim_idx]
+                 - ((crop_window_dims[spatial_dim_idx]+1)//2 - 1))
+        
+        stop = start + crop_window_dims[spatial_dim_idx]
+        
+        if pad_mode == "no-padding":
+            start = max(start, 0)
+            stop = min(stop, input_signal.data.shape[-(spatial_dim_idx+1)])
+
+        single_dim_slice_for_cropping = slice(start, stop)
+        multi_dim_slice_for_cropping = ((single_dim_slice_for_cropping,)
+                                        + multi_dim_slice_for_cropping)
+
+        diff_1 = 0-single_dim_slice_for_cropping.start
+        diff_2 = (single_dim_slice_for_cropping.stop
+                  - input_signal.data.shape[-(spatial_dim_idx+1)])
+
+        if apply_symmetric_mask:
+            mask_frame_width_1 = max(diff_1, diff_2, 0)
+            mask_frame_width_2 = mask_frame_width_1
         else:
-            k = max(p-c, 0)
-            m = min(p, c+min(shift[::-1][idx], k))
-        offsets[idx] = adjusted_center[idx] - m*scales[idx]
+            mask_frame_width_1 = max(diff_1, 0)
+            mask_frame_width_2 = max(diff_2, 0)
 
-    return offsets
+        start = mask_frame_width_1
+        stop = crop_window_dims[spatial_dim_idx] - mask_frame_width_2
 
+        single_dim_slice_for_masking = slice(start, stop)
+        multi_dim_slice_for_masking = ((single_dim_slice_for_masking,)
+                                       + multi_dim_slice_for_masking)
 
-
-def _crop_datasubset(input_datasubset, temp_cropping_params):
-    pad_width_1 = temp_cropping_params["pad_width_1"]
-    pad_width_2 = temp_cropping_params["pad_width_2"]
-    multi_dim_slice_1 = temp_cropping_params["multi_dim_slice_1"]
-    multi_dim_slice_2 = temp_cropping_params["multi_dim_slice_2"]
-    mode = temp_cropping_params["mode"]
-    symmetric_mask = temp_cropping_params["symmetric_mask"]
-
-    shifted_datasubset = np.pad(input_datasubset,
-                                pad_width_1,
-                                mode=mode)[multi_dim_slice_1]
-    cropped_datasubset = np.pad(shifted_datasubset,
-                                pad_width_2,
-                                mode=mode)[multi_dim_slice_2]
-
-    if symmetric_mask is not None:
-        cropped_datasubset *= (~symmetric_mask)
-
-    return cropped_datasubset
+    return multi_dim_slice_for_cropping, multi_dim_slice_for_masking
 
 
 
-def _update_output_signal_axes_v2(output_signal,
-                                  input_signal,
-                                  output_axes_offsets):
-    num_axes = len(input_signal.data.shape)
+def _crop_input_signal_datasubset(input_signal_datasubset,
+                                  input_signal_datasubset_cropping_params):
+    multi_dim_slice_for_cropping = \
+        input_signal_datasubset_cropping_params["multi_dim_slice_for_cropping"]
+    mask_to_apply_for_crop = \
+        input_signal_datasubset_cropping_params["mask_to_apply_for_crop"]
+
+    num_spatial_dims = len(input_signal_datasubset.shape)
+
+    cropped_input_signal_datasubset = input_signal_datasubset
+    for spatial_dim_idx in range(num_spatial_dims):
+        single_dim_slice_for_cropping = \
+            multi_dim_slice_for_cropping[-(spatial_dim_idx+1)]
         
-    for idx, output_axis_offset in enumerate(output_axes_offsets):
-        input_axis = \
-            input_signal.axes_manager[idx]
-        output_axis_size = \
-            output_signal.axes_manager[idx].size
-        new_output_axis = \
-            hyperspy.axes.UniformDataAxis(size=output_axis_size,
-                                          scale=input_axis.scale,
-                                          offset=output_axis_offset,
-                                          units=input_axis.units)
+        indices = np.arange(single_dim_slice_for_cropping.start,
+                            single_dim_slice_for_cropping.stop,
+                            dtype="int")
         
-        output_signal.axes_manager[idx].update_from(new_output_axis)
-        output_signal.axes_manager[idx].name = input_axis.name
+        kwargs = {"a": cropped_input_signal_datasubset,
+                  "indices": indices,
+                  "axis": 1-spatial_dim_idx,
+                  "mode": "wrap"}
+        cropped_input_signal_datasubset = np.take(**kwargs)
+    
+    if mask_to_apply_for_crop is not None:
+        cropped_input_signal_datasubset *= (~mask_to_apply_for_crop)
 
-    return None
+    return cropped_input_signal_datasubset
 
 
 
-def _check_and_convert_block_dims(ctor_params):
-    block_dims = ctor_params["block_dims"]
-    block_dims = czekitout.convert.to_pair_of_positive_ints(block_dims,
-                                                           "block_dims")
+def _check_and_convert_block_dims(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    kwargs = {"obj": params[obj_name], "obj_name": obj_name}
+    block_dims = czekitout.convert.to_pair_of_positive_ints(**kwargs)
     
     return block_dims
 
 
 
-def _check_and_convert_padding_const(ctor_params):
-    padding_const = ctor_params["padding_const"]
-    padding_const = czekitout.convert.to_float(padding_const, "padding_const")
-
-    return padding_const
-
-
-
-def _check_and_convert_downsample_mode(ctor_params):
-    downsample_mode = ctor_params["downsample_mode"]
-    downsample_mode = czekitout.convert.to_str_from_str_like(downsample_mode,
-                                                             "downsample_mode")
-    
-    accepted_values = ("sum", "mean", "median", "amin", "amax")
-    if downsample_mode not in accepted_values:
-        raise ValueError(_check_and_convert_downsample_mode_err_msg_1)
-
-    return downsample_mode
-
-
-
 def _pre_serialize_block_dims(block_dims):
-    serializable_rep = block_dims
-    
-    return serializable_rep
-
-
-
-def _pre_serialize_padding_const(padding_const):
-    serializable_rep = padding_const
-    
-    return serializable_rep
-
-
-
-def _pre_serialize_downsample_mode(downsample_mode):
-    serializable_rep = downsample_mode
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
 
@@ -2232,10 +2823,51 @@ def _de_pre_serialize_block_dims(serializable_rep):
 
 
 
+def _check_and_convert_padding_const(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    kwargs = {"obj": params[obj_name], "obj_name": obj_name}
+    padding_const = czekitout.convert.to_float(**kwargs)
+
+    return padding_const
+
+
+
+def _pre_serialize_padding_const(padding_const):
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
+    
+    return serializable_rep
+
+
+
 def _de_pre_serialize_padding_const(serializable_rep):
     padding_const = serializable_rep
 
     return padding_const
+
+
+
+def _check_and_convert_downsample_mode(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    kwargs = {"obj": params[obj_name], "obj_name": obj_name}
+    downsample_mode = czekitout.convert.to_str_from_str_like(**kwargs)
+
+    kwargs["accepted_strings"] = ("sum", "mean", "median", "amin", "amax")
+    czekitout.check.if_one_of_any_accepted_strings(**kwargs)
+
+    return downsample_mode
+
+
+
+def _pre_serialize_downsample_mode(downsample_mode):
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
+    
+    return serializable_rep
 
 
 
@@ -2246,7 +2878,14 @@ def _de_pre_serialize_downsample_mode(serializable_rep):
 
 
 
-class OptionalDownsamplingParams(fancytypes.PreSerializableAndUpdatable):
+_default_block_dims = (2, 2)
+_default_padding_const = 0
+_default_downsample_mode = "sum"
+
+
+
+_cls_alias = fancytypes.PreSerializableAndUpdatable
+class OptionalDownsamplingParams(_cls_alias):
     r"""The set of optional parameters for the function 
     :func:`empix.downsample`.
 
@@ -2286,56 +2925,107 @@ class OptionalDownsamplingParams(fancytypes.PreSerializableAndUpdatable):
         input ``hyperspy`` signal.  Otherwise, if ``title`` is a `str`, then the
         ``output_signal.metadata.General.title`` is set to the value of
         ``title``.
+    skip_validation_and_conversion : `bool`, optional
+        Let ``validation_and_conversion_funcs`` and ``core_attrs`` denote the
+        attributes :attr:`~fancytypes.Checkable.validation_and_conversion_funcs`
+        and :attr:`~fancytypes.Checkable.core_attrs` respectively, both of which
+        being `dict` objects.
 
-    Attributes
-    ----------
-    core_attrs : `dict`, read-only
-        A `dict` representation of the core attributes: each `dict` key is a
-        `str` representing the name of a core attribute, and the corresponding
-        `dict` value is the object to which said core attribute is set. The core
-        attributes are the same as the construction parameters, except that 
-        their values might have been updated since construction.
+        Let ``params_to_be_mapped_to_core_attrs`` denote the `dict`
+        representation of the constructor parameters excluding the parameter
+        ``skip_validation_and_conversion``, where each `dict` key ``key`` is a
+        different constructor parameter name, excluding the name
+        ``"skip_validation_and_conversion"``, and
+        ``params_to_be_mapped_to_core_attrs[key]`` would yield the value of the
+        constructor parameter with the name given by ``key``.
+
+        If ``skip_validation_and_conversion`` is set to ``False``, then for each
+        key ``key`` in ``params_to_be_mapped_to_core_attrs``,
+        ``core_attrs[key]`` is set to ``validation_and_conversion_funcs[key]
+        (params_to_be_mapped_to_core_attrs)``.
+
+        Otherwise, if ``skip_validation_and_conversion`` is set to ``True``,
+        then ``core_attrs`` is set to
+        ``params_to_be_mapped_to_core_attrs.copy()``. This option is desired
+        primarily when the user wants to avoid potentially expensive deep copies
+        and/or conversions of the `dict` values of
+        ``params_to_be_mapped_to_core_attrs``, as it is guaranteed that no
+        copies or conversions are made in this case.
 
     """
-    _validation_and_conversion_funcs = \
-        {"block_dims": _check_and_convert_block_dims,
-         "padding_const": _check_and_convert_padding_const,
-         "downsample_mode": _check_and_convert_downsample_mode,
-         "title": _check_and_convert_title_v1}
+    ctor_param_names = ("block_dims",
+                        "padding_const",
+                        "downsample_mode",
+                        "title")
+    kwargs = {"namespace_as_dict": globals(),
+              "ctor_param_names": ctor_param_names}
+    
+    _validation_and_conversion_funcs_ = \
+        fancytypes.return_validation_and_conversion_funcs(**kwargs)
+    _pre_serialization_funcs_ = \
+        fancytypes.return_pre_serialization_funcs(**kwargs)
+    _de_pre_serialization_funcs_ = \
+        fancytypes.return_de_pre_serialization_funcs(**kwargs)
 
-    _pre_serialization_funcs = \
-        {"block_dims": _pre_serialize_block_dims,
-         "padding_const": _pre_serialize_padding_const,
-         "downsample_mode": _pre_serialize_downsample_mode,
-         "title": _pre_serialize_title}
+    del ctor_param_names, kwargs
 
-    _de_pre_serialization_funcs = \
-        {"block_dims": _de_pre_serialize_block_dims,
-         "padding_const": _de_pre_serialize_padding_const,
-         "downsample_mode": _de_pre_serialize_downsample_mode,
-         "title": _de_pre_serialize_title}
+    
 
     def __init__(self,
-                 block_dims=(2, 2),
-                 padding_const=0,
-                 downsample_mode="sum",
-                 title=None):
-        ctor_params = {"block_dims": block_dims,
-                       "padding_const": padding_const,
-                       "downsample_mode": downsample_mode,
-                       "title": title}
-        fancytypes.PreSerializableAndUpdatable.__init__(self, ctor_params)
+                 block_dims=\
+                 _default_block_dims,
+                 padding_const=\
+                 _default_padding_const,
+                 downsample_mode=\
+                 _default_downsample_mode,
+                 title=\
+                 _default_title,
+                 skip_validation_and_conversion=\
+                 _default_skip_validation_and_conversion):
+        ctor_params = {key: val
+                       for key, val in locals().items()
+                       if (key not in ("self", "__class__"))}
+        kwargs = ctor_params
+        kwargs["skip_cls_tests"] = True
+        fancytypes.PreSerializableAndUpdatable.__init__(self, **kwargs)
 
         return None
 
 
 
-def downsample(input_signal, optional_params=None):
+    @classmethod
+    def get_validation_and_conversion_funcs(cls):
+        validation_and_conversion_funcs = \
+            cls._validation_and_conversion_funcs_.copy()
+
+        return validation_and_conversion_funcs
+
+
+    
+    @classmethod
+    def get_pre_serialization_funcs(cls):
+        pre_serialization_funcs = \
+            cls._pre_serialization_funcs_.copy()
+
+        return pre_serialization_funcs
+
+
+    
+    @classmethod
+    def get_de_pre_serialization_funcs(cls):
+        de_pre_serialization_funcs = \
+            cls._de_pre_serialization_funcs_.copy()
+
+        return de_pre_serialization_funcs
+
+
+
+def downsample(input_signal, optional_params=_default_optional_params):
     r"""Downsample a given input 2D ``hyperspy`` signal.
 
-    This current Python function copies a given input 2D
-    ``hyperspy`` signal and downsamples the copy along the axes in signal space.
-    The Python function effectively does the following: 
+    This Python function copies a given input 2D ``hyperspy`` signal and
+    downsamples the copy along the axes in signal space.  The Python function
+    effectively does the following:
 
     1. Groups the pixels of the copy of the input signal into so-called
     downsampling blocks along the axes in signal space, with dimensions
@@ -2363,210 +3053,117 @@ def downsample(input_signal, optional_params=None):
     Returns
     -------
     output_signal : :class:`hyperspy._signals.signal2d.Signal2D` | :class:`hyperspy._signals.complex_signal2d.ComplexSignal2D`
-        The output ``hyperspy`` signal that results from the downsampling. Note
-        that except for the title, the metadata of the output signal is
-        determined from the metadata of the input signal.
+        The output ``hyperspy`` signal that results from the downsampling. Note 
+        that the metadata of the input signal is copied over to the output 
+        signal, with the title being overwritten.
 
     """
-    _check_2D_input_signal(input_signal)
-    if optional_params is None:
-        optional_params = OptionalDownsamplingParams()
-    if not isinstance(optional_params, OptionalDownsamplingParams):
-        raise TypeError(_downsample_err_msg_1)
-    title = optional_params.core_attrs["title"]
-    if title is None:
-        title = _default_title(input_signal, "Downsampled ", "")
+    params = locals()
+    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    for param_name in params:
+        func_name = "_check_and_convert_" + param_name
+        func_alias = globals()[func_name]
+        params[param_name] = func_alias(params)
 
-    navigation_dims = input_signal.data.shape[:-2]
-    navigation_indices = np.unravel_index(0, navigation_dims)
-    input_datasubset = input_signal.data[navigation_indices]
-    output_datasubset = _downsample_datasubset(input_datasubset,
-                                               optional_params)
-    output_data_shape = list(navigation_dims) + list(output_datasubset.shape)
-    output_data = np.zeros(output_data_shape, dtype=input_signal.data.dtype)
-
-    output_data[navigation_indices] = output_datasubset
-    num_patterns = int(np.prod(navigation_dims))
-    for pattern_idx in range(1, num_patterns):
-        navigation_indices = np.unravel_index(pattern_idx, navigation_dims)
-        input_datasubset = input_signal.data[navigation_indices]
-            
-        kwargs = {"input_datasubset": input_datasubset,
-                  "optional_params": optional_params}
-        output_datasubset = _downsample_datasubset(**kwargs)
-        output_data[navigation_indices] = output_datasubset
-        
-    metadata = {"General": {"title": title}, "Signal": dict()}
-    if np.isrealobj(output_data):
-        output_signal = hyperspy.signals.Signal2D(data=output_data,
-                                                  metadata=metadata)
-    else:
-        output_signal = hyperspy.signals.ComplexSignal2D(data=output_data,
-                                                         metadata=metadata)
-
-    _update_output_signal_axes_v3(output_signal, input_signal, optional_params)
+    func_name = "_" + inspect.stack()[0][3]
+    func_alias = globals()[func_name]
+    kwargs = params
+    del kwargs["action_to_apply_to_input_signal"]
+    output_signal = func_alias(**kwargs)
 
     return output_signal
 
 
 
-def _downsample_datasubset(input_datasubset, optional_params):
-    downsample_mode = optional_params.core_attrs["downsample_mode"]
-    if downsample_mode == "sum":
-        func = np.sum
-    elif downsample_mode == "mean":
-        func = np.mean
-    elif downsample_mode == "median":
-        func = np.median
-    elif downsample_mode == "amin":
-        func = np.amin
-    else:
-        func = np.amax
-    
-    kwargs = {"block_size": optional_params.core_attrs["block_dims"][::-1],
-              "cval": optional_params.core_attrs["padding_const"],
-              "func": func}
+def _downsample(input_signal, optional_params):
+    optional_params_core_attrs = optional_params.get_core_attrs(deep_copy=False)
+    title = optional_params_core_attrs["title"]
 
-    downsampled_datasubset = skimage.measure.block_reduce(input_datasubset,
-                                                          **kwargs)
+    navigation_dims = input_signal.data.shape[:-2]
+    num_patterns = int(np.prod(navigation_dims))
 
-    return downsampled_datasubset
+    for pattern_idx in range(0, num_patterns):
+        navigation_indices = np.unravel_index(pattern_idx, navigation_dims)
+        input_signal_datasubset = input_signal.data[navigation_indices]
+            
+        kwargs = {"input_signal_datasubset": input_signal_datasubset,
+                  "optional_params": optional_params}
+        output_signal_datasubset = _downsample_input_signal_datasubset(**kwargs)
 
+        if pattern_idx == 0:
+            output_signal_data_shape = (navigation_dims
+                                        + output_signal_datasubset.shape)
+            output_signal_data = np.zeros(output_signal_data_shape,
+                                          dtype=input_signal.data.dtype)
 
-
-def _update_output_signal_axes_v3(output_signal, input_signal, optional_params):
-    num_axes = len(input_signal.data.shape)
-
-    sizes = [output_signal.axes_manager[idx].scale for idx in range(num_axes)]
-    scales = [input_signal.axes_manager[idx].scale for idx in range(num_axes)]
-    offsets = [input_signal.axes_manager[idx].offset for idx in range(num_axes)]
-    units = [input_signal.axes_manager[idx].units for idx in range(num_axes)]
-    names = [input_signal.axes_manager[idx].name for idx in range(num_axes)]
-
-    for idx in (-2, -1):
-        L = optional_params.core_attrs["block_dims"][idx]
-        offsets[idx] += 0.5*(L-1)*scales[idx]
-        scales[idx] *= L
+        output_signal_data[navigation_indices] = output_signal_datasubset
         
-    for idx in range(num_axes):
-        new_output_axis = hyperspy.axes.UniformDataAxis(size=sizes[idx],
-                                                        scale=scales[idx],
-                                                        offset=offsets[idx],
-                                                        units=units[idx])
-        output_signal.axes_manager[idx].update_from(new_output_axis)
-        output_signal.axes_manager[idx].name = names[idx]
+    kwargs = {"data": output_signal_data,
+              "metadata": input_signal.metadata.as_dictionary()}
+    if np.isrealobj(output_signal_data):
+        output_signal = hyperspy.signals.Signal2D(**kwargs)
+    else:
+        output_signal = hyperspy.signals.ComplexSignal2D(**kwargs)
+    output_signal.metadata.set_item("General.title", title)
 
-    return None
+    kwargs = {"input_signal": input_signal,
+              "optional_params": optional_params,
+              "bin_coords": None,
+              "output_signal": output_signal}
+    _update_output_signal_axes(**kwargs)
+
+    return output_signal
 
 
 
-def _check_and_convert_new_signal_space_sizes_v1(ctor_params):
-    new_signal_space_sizes = ctor_params["new_signal_space_sizes"]
+def _downsample_input_signal_datasubset(input_signal_datasubset,
+                                        optional_params):
+    optional_params_core_attrs = optional_params.get_core_attrs(deep_copy=False)
+    block_dims = optional_params_core_attrs["block_dims"]
+    padding_const = optional_params_core_attrs["padding_const"]
+    downsample_mode = optional_params_core_attrs["downsample_mode"]
     
-    if new_signal_space_sizes is not None:
+    kwargs = {"image": input_signal_datasubset,
+              "block_size": block_dims[::-1],
+              "cval": padding_const,
+              "func": getattr(np, downsample_mode)}
+    downsampled_input_signal_datasubset = skimage.measure.block_reduce(**kwargs)
+
+    return downsampled_input_signal_datasubset
+
+
+
+def _check_and_convert_new_signal_space_sizes(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    obj = params[obj_name]
+
+    param_name = "input_signal"
+    input_signal = params.get(param_name, None)
+    
+    if obj is not None:
         try:
-            kwargs = {"obj": new_signal_space_sizes,
-                      "obj_name": "new_signal_space_sizes"}
-            new_signal_space_sizes = \
-                czekitout.convert.to_pair_of_positive_ints(**kwargs)
+            func_alias = czekitout.convert.to_pair_of_positive_ints
+            kwargs = {"obj": obj, "obj_name": obj_name}
+            new_signal_space_sizes = func_alias(**kwargs)
         except:
-            err_msg = _check_and_convert_new_signal_space_sizes_v1_err_msg_1
+            err_msg = globals()[current_func_name+"_err_msg_1"]
             raise TypeError(err_msg)
+    else:
+        if input_signal is not None:
+            N_v, N_h = input_signal.data.shape[-2:]
+            new_signal_space_sizes = (N_h, N_v)
+        else:
+            new_signal_space_sizes = obj
 
     return new_signal_space_sizes
 
 
 
-def _check_and_convert_new_signal_space_scales_v1(ctor_params):
-    new_signal_space_scales = ctor_params["new_signal_space_scales"]
-
-    if new_signal_space_scales is not None:
-        err_msg = _check_and_convert_new_signal_space_scales_v1_err_msg_1
-        try:
-            kwargs = {"obj": new_signal_space_scales,
-                      "obj_name": "new_signal_space_scales"}
-            new_signal_space_scales = \
-                czekitout.convert.to_pair_of_floats(**kwargs)
-        except:
-            raise TypeError(err_msg)
-
-        if np.prod(new_signal_space_scales) == 0:
-            raise ValueError(err_msg)
-
-    return new_signal_space_scales
-
-
-
-def _check_and_convert_new_signal_space_offsets_v1(ctor_params):
-    new_signal_space_offsets = ctor_params["new_signal_space_offsets"]
-
-    if new_signal_space_offsets is not None:
-        try:
-            kwargs = {"obj": new_signal_space_offsets,
-                      "obj_name": "new_signal_space_offsets"}
-            new_signal_space_offsets = \
-                czekitout.convert.to_pair_of_floats(**kwargs)
-        except:
-            err_msg = _check_and_convert_new_signal_space_offsets_v1_err_msg_1
-            raise TypeError(err_msg)
-
-    return new_signal_space_offsets
-
-
-
-def _check_and_convert_spline_degrees(ctor_params):
-    spline_degrees = ctor_params["spline_degrees"]
-    spline_degrees = \
-        czekitout.convert.to_pair_of_positive_ints(spline_degrees,
-                                                   "spline_degrees")
-
-    if (spline_degrees[0] > 5) or (spline_degrees[1] > 5):
-        raise ValueError(_check_and_convert_spline_degrees_err_msg_1)
-
-    return spline_degrees
-
-
-
-def _check_and_convert_interpolate_polar_cmpnts(ctor_params):
-    interpolate_polar_cmpnts = ctor_params["interpolate_polar_cmpnts"]
-    interpolate_polar_cmpnts = \
-        czekitout.convert.to_bool(interpolate_polar_cmpnts,
-                                  "interpolate_polar_cmpnts")
-
-    return interpolate_polar_cmpnts
-
-
-
 def _pre_serialize_new_signal_space_sizes(new_signal_space_sizes):
-    serializable_rep = new_signal_space_sizes
-    
-    return serializable_rep
-
-
-
-def _pre_serialize_new_signal_space_scales(new_signal_space_scales):
-    serializable_rep = new_signal_space_scales
-    
-    return serializable_rep
-
-
-
-def _pre_serialize_new_signal_space_offsets(new_signal_space_offsets):
-    serializable_rep = new_signal_space_offsets
-    
-    return serializable_rep
-
-
-
-def _pre_serialize_spline_degrees(spline_degrees):
-    serializable_rep = spline_degrees
-    
-    return serializable_rep
-
-
-
-def _pre_serialize_interpolate_polar_cmpnts(interpolate_polar_cmpnts):
-    serializable_rep = interpolate_polar_cmpnts
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
 
@@ -2579,10 +3176,86 @@ def _de_pre_serialize_new_signal_space_sizes(serializable_rep):
 
 
 
+def _check_and_convert_new_signal_space_scales(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    obj = params[obj_name]
+
+    param_name = "input_signal"
+    input_signal = params.get(param_name, None)
+    
+    if obj is not None:
+        try:
+            func_alias = czekitout.convert.to_pair_of_floats
+            kwargs = {"obj": obj, "obj_name": obj_name}
+            new_signal_space_scales = func_alias(**kwargs)
+        except:
+            err_msg = globals()[current_func_name+"_err_msg_1"]
+            raise TypeError(err_msg)
+
+        if np.prod(new_signal_space_scales) == 0:
+            err_msg = globals()[current_func_name+"_err_msg_1"]
+            raise ValueError(err_msg)
+    else:
+        if input_signal is not None:
+            new_signal_space_scales = (input_signal.axes_manager[-2].scale,
+                                       input_signal.axes_manager[-1].scale)
+        else:
+            new_signal_space_scales = obj
+
+    return new_signal_space_scales
+
+
+
+def _pre_serialize_new_signal_space_scales(new_signal_space_scales):
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
+    
+    return serializable_rep
+
+
+
 def _de_pre_serialize_new_signal_space_scales(serializable_rep):
     new_signal_space_scales = serializable_rep
 
     return new_signal_space_scales
+
+
+
+def _check_and_convert_new_signal_space_offsets(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    obj = params[obj_name]
+
+    param_name = "input_signal"
+    input_signal = params.get(param_name, None)
+    
+    if obj is not None:
+        try:
+            func_alias = czekitout.convert.to_pair_of_floats
+            kwargs = {"obj": obj, "obj_name": obj_name}
+            new_signal_space_offsets = func_alias(**kwargs)
+        except:
+            err_msg = globals()[current_func_name+"_err_msg_1"]
+            raise TypeError(err_msg)
+    else:
+        if input_signal is not None:
+            new_signal_space_offsets = (input_signal.axes_manager[-2].offset,
+                                        input_signal.axes_manager[-1].offset)
+        else:
+            new_signal_space_offsets = obj
+
+    return new_signal_space_offsets
+
+
+
+def _pre_serialize_new_signal_space_offsets(new_signal_space_offsets):
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
+    
+    return serializable_rep
 
 
 
@@ -2593,10 +3266,52 @@ def _de_pre_serialize_new_signal_space_offsets(serializable_rep):
 
 
 
+def _check_and_convert_spline_degrees(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    kwargs = {"obj": params[obj_name], "obj_name": obj_name}
+    spline_degrees = czekitout.convert.to_pair_of_positive_ints(**kwargs)
+
+    if (spline_degrees[0] > 5) or (spline_degrees[1] > 5):
+        err_msg = globals()[current_func_name+"_err_msg_1"]
+        raise ValueError(err_msg)
+
+    return spline_degrees
+
+
+
+def _pre_serialize_spline_degrees(spline_degrees):
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
+    
+    return serializable_rep
+
+
+
 def _de_pre_serialize_spline_degrees(serializable_rep):
     spline_degrees = serializable_rep
 
     return spline_degrees
+
+
+
+def _check_and_convert_interpolate_polar_cmpnts(params):
+    current_func_name = inspect.stack()[0][3]
+    char_idx = 19
+    obj_name = current_func_name[char_idx:]
+    kwargs = {"obj": params[obj_name], "obj_name": obj_name}
+    interpolate_polar_cmpnts = czekitout.convert.to_bool(**kwargs)
+
+    return interpolate_polar_cmpnts
+
+
+
+def _pre_serialize_interpolate_polar_cmpnts(interpolate_polar_cmpnts):
+    obj_to_pre_serialize = random.choice(list(locals().values()))
+    serializable_rep = obj_to_pre_serialize
+    
+    return serializable_rep
 
 
 
@@ -2607,6 +3322,15 @@ def _de_pre_serialize_interpolate_polar_cmpnts(serializable_rep):
 
 
 
+_default_new_signal_space_sizes = None
+_default_new_signal_space_scales = None
+_default_new_signal_space_offsets = None
+_default_spline_degrees = (3, 3)
+_default_interpolate_polar_cmpnts = True
+
+
+
+_cls_alias = fancytypes.PreSerializableAndUpdatable
 class OptionalResamplingParams(fancytypes.PreSerializableAndUpdatable):
     r"""The set of optional parameters for the function :func:`empix.resample`.
 
@@ -2623,30 +3347,30 @@ class OptionalResamplingParams(fancytypes.PreSerializableAndUpdatable):
         ``input_signal.data.shape``, where ``input_signal`` is the input signal,
         and ``output_signal`` is the output signal to result from the
         resampling. Otherwise, if ``new_signal_space_sizes`` is set to a pair of
-        positive integers, then ``output_signal.data.shape[-2]`` and
-        ``output_signal.data.shape[-1]`` will be equal to
+        positive integers, then ``output_signal.data.shape[-1]`` and
+        ``output_signal.data.shape[-2]`` will be equal to
         ``new_signal_space_sizes[0]`` and ``new_signal_space_sizes[1]``
         respectively.
     new_signal_space_scales : `array_like` (`float`, shape=(2,)) | `None`, optional
         Continuing from above, if ``new_signal_space_scales`` is set to
-        ``None``, then ``output_signal.axes_manager[-2].scale`` and
-        ``output_signal.axes_manager[-1].scale`` will be equal to
-        ``input_signal.axes_manager[-2].scale`` and
-        ``input_signal.axes_manager[-1].scale`` respectively. If
+        ``None``, then ``output_signal.axes_manager[-1].scale`` and
+        ``output_signal.axes_manager[-2].scale`` will be equal to
+        ``input_signal.axes_manager[-1].scale`` and
+        ``input_signal.axes_manager[-2].scale`` respectively. If
         ``new_signal_space_scales`` is set to a pair of non-zero floating-point
-        numbers, then ``output_signal.axes_manager[-2].scale`` and
-        ``output_signal.axes_manager[-1].scale`` will be equal to
+        numbers, then ``output_signal.axes_manager[-1].scale`` and
+        ``output_signal.axes_manager[-2].scale`` will be equal to
         ``new_signal_space_scales[0]`` and ``new_signal_space_scales[1]``
         respectively. Otherwise, an error is raised.
     new_signal_space_offsets : `array_like` (`float`, shape=(2,)) | `None`, optional
         Continuing from above, if ``new_signal_space_offsets`` is set to
-        ``None``, then ``output_signal.axes_manager[-2].offset`` and
-        ``output_signal.axes_manager[-1].offset`` will be equal to
-        ``input_signal.axes_manager[-2].offset`` and
-        ``input_signal.axes_manager[-1].offset`` respectively. Otherwise, if
+        ``None``, then ``output_signal.axes_manager[-1].offset`` and
+        ``output_signal.axes_manager[-2].offset`` will be equal to
+        ``input_signal.axes_manager[-1].offset`` and
+        ``input_signal.axes_manager[-2].offset`` respectively. Otherwise, if
         ``new_signal_space_offsets`` is set to a pair of floating-point numbers,
-        then ``output_signal.axes_manager[-2].offset`` and
-        ``output_signal.axes_manager[-1].offset`` will be equal to
+        then ``output_signal.axes_manager[-1].offset`` and
+        ``output_signal.axes_manager[-2].offset`` will be equal to
         ``new_signal_space_offsets[0]`` and ``new_signal_space_offsets[1]``
         respectively.
     spline_degrees : `array_like` (`int`, shape=(2,)), optional
@@ -2668,68 +3392,111 @@ class OptionalResamplingParams(fancytypes.PreSerializableAndUpdatable):
         input ``hyperspy`` signal.  Otherwise, if ``title`` is a `str`, then the
         ``output_signal.metadata.General.title`` is set to the value of
         ``title``.
+    skip_validation_and_conversion : `bool`, optional
+        Let ``validation_and_conversion_funcs`` and ``core_attrs`` denote the
+        attributes :attr:`~fancytypes.Checkable.validation_and_conversion_funcs`
+        and :attr:`~fancytypes.Checkable.core_attrs` respectively, both of which
+        being `dict` objects.
 
-    Attributes
-    ----------
-    core_attrs : `dict`, read-only
-        A `dict` representation of the core attributes: each `dict` key is a
-        `str` representing the name of a core attribute, and the corresponding
-        `dict` value is the object to which said core attribute is set. The core
-        attributes are the same as the construction parameters, except that 
-        their values might have been updated since construction.
+        Let ``params_to_be_mapped_to_core_attrs`` denote the `dict`
+        representation of the constructor parameters excluding the parameter
+        ``skip_validation_and_conversion``, where each `dict` key ``key`` is a
+        different constructor parameter name, excluding the name
+        ``"skip_validation_and_conversion"``, and
+        ``params_to_be_mapped_to_core_attrs[key]`` would yield the value of the
+        constructor parameter with the name given by ``key``.
+
+        If ``skip_validation_and_conversion`` is set to ``False``, then for each
+        key ``key`` in ``params_to_be_mapped_to_core_attrs``,
+        ``core_attrs[key]`` is set to ``validation_and_conversion_funcs[key]
+        (params_to_be_mapped_to_core_attrs)``.
+
+        Otherwise, if ``skip_validation_and_conversion`` is set to ``True``,
+        then ``core_attrs`` is set to
+        ``params_to_be_mapped_to_core_attrs.copy()``. This option is desired
+        primarily when the user wants to avoid potentially expensive deep copies
+        and/or conversions of the `dict` values of
+        ``params_to_be_mapped_to_core_attrs``, as it is guaranteed that no
+        copies or conversions are made in this case.
 
     """
-    _validation_and_conversion_funcs = \
-        {"new_signal_space_sizes": \
-         _check_and_convert_new_signal_space_sizes_v1,
-         "new_signal_space_scales": \
-         _check_and_convert_new_signal_space_scales_v1,
-         "new_signal_space_offsets": \
-         _check_and_convert_new_signal_space_offsets_v1,
-         "spline_degrees": _check_and_convert_spline_degrees,
-         "interpolate_polar_cmpnts": \
-         _check_and_convert_interpolate_polar_cmpnts,
-         "title": _check_and_convert_title_v1}
+    ctor_param_names = ("new_signal_space_sizes",
+                        "new_signal_space_scales",
+                        "new_signal_space_offsets",
+                        "spline_degrees",
+                        "interpolate_polar_cmpnts",
+                        "title")
+    kwargs = {"namespace_as_dict": globals(),
+              "ctor_param_names": ctor_param_names}
+    
+    _validation_and_conversion_funcs_ = \
+        fancytypes.return_validation_and_conversion_funcs(**kwargs)
+    _pre_serialization_funcs_ = \
+        fancytypes.return_pre_serialization_funcs(**kwargs)
+    _de_pre_serialization_funcs_ = \
+        fancytypes.return_de_pre_serialization_funcs(**kwargs)
 
-    _pre_serialization_funcs = \
-        {"new_signal_space_sizes": _pre_serialize_new_signal_space_sizes,
-         "new_signal_space_scales": _pre_serialize_new_signal_space_scales,
-         "new_signal_space_offsets": _pre_serialize_new_signal_space_offsets,
-         "spline_degrees": _pre_serialize_spline_degrees,
-         "interpolate_polar_cmpnts": _pre_serialize_interpolate_polar_cmpnts,
-         "title": _pre_serialize_title}
+    del ctor_param_names, kwargs
 
-    _de_pre_serialization_funcs = \
-        {"new_signal_space_sizes": _de_pre_serialize_new_signal_space_sizes,
-         "new_signal_space_scales": _de_pre_serialize_new_signal_space_scales,
-         "new_signal_space_offsets": _de_pre_serialize_new_signal_space_offsets,
-         "spline_degrees": _de_pre_serialize_spline_degrees,
-         "interpolate_polar_cmpnts": _de_pre_serialize_interpolate_polar_cmpnts,
-         "title": _de_pre_serialize_title}
+    
 
     def __init__(self,
-                 new_signal_space_sizes=None,
-                 new_signal_space_scales=None,
-                 new_signal_space_offsets=None,
-                 spline_degrees=(3, 3),
-                 interpolate_polar_cmpnts=True,
-                 title=None):
-        ctor_params = {"new_signal_space_sizes": new_signal_space_sizes,
-                       "new_signal_space_scales": new_signal_space_scales,
-                       "new_signal_space_offsets": new_signal_space_offsets,
-                       "spline_degrees": spline_degrees,
-                       "interpolate_polar_cmpnts": interpolate_polar_cmpnts,
-                       "title": title}
-        fancytypes.PreSerializableAndUpdatable.__init__(self, ctor_params)
+                 new_signal_space_sizes=\
+                 _default_new_signal_space_sizes,
+                 new_signal_space_scales=\
+                 _default_new_signal_space_scales,
+                 new_signal_space_offsets=\
+                 _default_new_signal_space_offsets,
+                 spline_degrees=\
+                 _default_spline_degrees,
+                 interpolate_polar_cmpnts=\
+                 _default_interpolate_polar_cmpnts,
+                 title=\
+                 _default_title,
+                 skip_validation_and_conversion=\
+                 _default_skip_validation_and_conversion):
+        ctor_params = {key: val
+                       for key, val in locals().items()
+                       if (key not in ("self", "__class__"))}
+        kwargs = ctor_params
+        kwargs["skip_cls_tests"] = True
+        fancytypes.PreSerializableAndUpdatable.__init__(self, **kwargs)
 
         return None
 
 
 
-def resample(input_signal, optional_params=None):
+    @classmethod
+    def get_validation_and_conversion_funcs(cls):
+        validation_and_conversion_funcs = \
+            cls._validation_and_conversion_funcs_.copy()
+
+        return validation_and_conversion_funcs
+
+
+    
+    @classmethod
+    def get_pre_serialization_funcs(cls):
+        pre_serialization_funcs = \
+            cls._pre_serialization_funcs_.copy()
+
+        return pre_serialization_funcs
+
+
+    
+    @classmethod
+    def get_de_pre_serialization_funcs(cls):
+        de_pre_serialization_funcs = \
+            cls._de_pre_serialization_funcs_.copy()
+
+        return de_pre_serialization_funcs
+
+
+
+def resample(input_signal, optional_params=_default_optional_params):
     r"""Resample a given input 2D ``hyperspy`` signal via interpolation.
 
-    This current Python function copies a given input 2D ``hyperspy`` signal and
+    This Python function copies a given input 2D ``hyperspy`` signal and
     resamples the copy along the axes in signal space by interpolating the
     original input signal using bivariate spines. Effectively,
     :func:`empix.resample` resamples the input signal.
@@ -2748,125 +3515,85 @@ def resample(input_signal, optional_params=None):
     Returns
     -------
     output_signal : :class:`hyperspy._signals.signal2d.Signal2D` | :class:`hyperspy._signals.complex_signal2d.ComplexSignal2D`
-        The output ``hyperspy`` signal that results from the resampling. Note
-        that except for the title, the metadata of the output signal is
-        determined from the metadata of the input signal.
+        The output ``hyperspy`` signal that results from the resampling. Note 
+        that the metadata of the input signal is copied over to the output 
+        signal, with the title being overwritten.
 
     """
-    _check_2D_input_signal(input_signal)
-    optional_params = _check_and_convert_optional_params_v4(optional_params,
-                                                            input_signal)
-    title = optional_params.core_attrs["title"]
-    if title is None:
-        title = _default_title(input_signal, "Resampled ", "")
+    params = locals()
+    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    for param_name in params:
+        func_name = "_check_and_convert_" + param_name
+        func_alias = globals()[func_name]
+        params[param_name] = func_alias(params)
 
-    temp_resampling_params = _temp_resampling_params(input_signal,
-                                                     optional_params)
-
-    navigation_dims = input_signal.data.shape[:-2]
-    navigation_indices = np.unravel_index(0, navigation_dims)
-    input_datasubset = input_signal.data[navigation_indices]
-    output_datasubset = _resample_datasubset(input_datasubset,
-                                             temp_resampling_params)
-    output_data_shape = list(navigation_dims) + list(output_datasubset.shape)
-    output_data = np.zeros(output_data_shape, dtype=input_signal.data.dtype)
-
-    output_data[navigation_indices] = output_datasubset
-    num_patterns = int(np.prod(navigation_dims))
-    for pattern_idx in range(1, num_patterns):
-        navigation_indices = np.unravel_index(pattern_idx, navigation_dims)
-        input_datasubset = input_signal.data[navigation_indices]
-            
-        kwargs = {"input_datasubset": input_datasubset,
-                  "temp_resampling_params": temp_resampling_params}
-        output_datasubset = _resample_datasubset(**kwargs)
-        output_data[navigation_indices] = output_datasubset
-        
-    metadata = {"General": {"title": title}, "Signal": dict()}
-    if np.isrealobj(output_data):
-        output_signal = hyperspy.signals.Signal2D(data=output_data,
-                                                  metadata=metadata)
-    else:
-        output_signal = hyperspy.signals.ComplexSignal2D(data=output_data,
-                                                         metadata=metadata)
-
-    _update_output_signal_axes_v4(output_signal, input_signal, optional_params)
+    func_name = "_" + inspect.stack()[0][3]
+    func_alias = globals()[func_name]
+    kwargs = params
+    del kwargs["action_to_apply_to_input_signal"]
+    output_signal = func_alias(**kwargs)
 
     return output_signal
 
 
 
-def _check_and_convert_optional_params_v4(optional_params, input_signal):
-    if optional_params is None:
-        optional_params = OptionalResamplingParams()
-    if not isinstance(optional_params, OptionalResamplingParams):
-        raise TypeError(_check_and_convert_optional_params_v4_err_msg_1)
+def _resample(input_signal, optional_params):
+    optional_params_core_attrs = optional_params.get_core_attrs(deep_copy=False)
+    title = optional_params_core_attrs["title"]
 
-    new_signal_space_sizes = \
-        optional_params.core_attrs["new_signal_space_sizes"]
-    new_signal_space_sizes = \
-        _check_and_convert_new_signal_space_sizes_v2(new_signal_space_sizes,
-                                                     input_signal)
+    func_alias = _calc_input_signal_datasubset_resampling_params
+    input_signal_datasubset_resampling_params = func_alias(input_signal,
+                                                           optional_params)
 
-    new_signal_space_scales = \
-        optional_params.core_attrs["new_signal_space_scales"]
-    new_signal_space_scales = \
-        _check_and_convert_new_signal_space_scales_v2(new_signal_space_scales,
-                                                      input_signal)
+    navigation_dims = input_signal.data.shape[:-2]
+    num_patterns = int(np.prod(navigation_dims))
 
-    new_signal_space_offsets = \
-        optional_params.core_attrs["new_signal_space_offsets"]
-    new_signal_space_offsets = \
-        _check_and_convert_new_signal_space_offsets_v2(new_signal_space_offsets,
-                                                       input_signal)
+    for pattern_idx in range(0, num_patterns):
+        navigation_indices = np.unravel_index(pattern_idx, navigation_dims)
+        input_signal_datasubset = input_signal.data[navigation_indices]
+            
+        kwargs = {"input_signal_datasubset": \
+                  input_signal_datasubset,
+                  "input_signal_datasubset_resampling_params": \
+                  input_signal_datasubset_resampling_params}
+        output_signal_datasubset = _resample_input_signal_datasubset(**kwargs)
 
-    core_attr_subset = {"new_signal_space_sizes": new_signal_space_sizes,
-                        "new_signal_space_scales": new_signal_space_scales,
-                        "new_signal_space_offsets": new_signal_space_offsets}
-    optional_params.update(core_attr_subset)
+        if pattern_idx == 0:
+            output_signal_data_shape = (navigation_dims
+                                        + output_signal_datasubset.shape)
+            output_signal_data = np.zeros(output_signal_data_shape,
+                                          dtype=input_signal.data.dtype)
 
-    return optional_params
+        output_signal_data[navigation_indices] = output_signal_datasubset
+        
+    kwargs = {"data": output_signal_data,
+              "metadata": input_signal.metadata.as_dictionary()}
+    if np.isrealobj(output_signal_data):
+        output_signal = hyperspy.signals.Signal2D(**kwargs)
+    else:
+        output_signal = hyperspy.signals.ComplexSignal2D(**kwargs)
+    output_signal.metadata.set_item("General.title", title)
 
+    kwargs = {"input_signal": input_signal,
+              "optional_params": optional_params,
+              "bin_coords": None,
+              "output_signal": output_signal}
+    _update_output_signal_axes(**kwargs)
 
-
-def _check_and_convert_new_signal_space_sizes_v2(new_signal_space_sizes,
-                                                 signal):
-    if new_signal_space_sizes is None:
-        n_v, n_h = signal.data.shape[-2:]
-        new_signal_space_sizes = (n_h, n_v)
-
-    return new_signal_space_sizes
-
-
-
-def _check_and_convert_new_signal_space_scales_v2(new_signal_space_scales,
-                                                  signal):
-    if new_signal_space_scales is None:
-        new_signal_space_scales = (signal.axes_manager[-2].scale,
-                                   signal.axes_manager[-1].scale)
-
-    return new_signal_space_scales
+    return output_signal
 
 
 
-def _check_and_convert_new_signal_space_offsets_v2(new_signal_space_offsets,
-                                                   signal):
-    if new_signal_space_offsets is None:
-        new_signal_space_offsets = (signal.axes_manager[-2].offset,
-                                    signal.axes_manager[-1].offset)
-
-    return new_signal_space_offsets
-
-
-
-def _temp_resampling_params(input_signal, optional_params):
+def _calc_input_signal_datasubset_resampling_params(input_signal,
+                                                    optional_params):
     old_sizes = [input_signal.axes_manager[idx].size for idx in (-2, -1)]
     old_scales = [input_signal.axes_manager[idx].scale for idx in (-2, -1)]
     old_offsets = [input_signal.axes_manager[idx].offset for idx in (-2, -1)]
 
-    new_sizes = optional_params.core_attrs["new_signal_space_sizes"]
-    new_scales = optional_params.core_attrs["new_signal_space_scales"]
-    new_offsets = optional_params.core_attrs["new_signal_space_offsets"]
+    optional_params_core_attrs = optional_params.get_core_attrs(deep_copy=False)
+    new_sizes = optional_params_core_attrs["new_signal_space_sizes"]
+    new_scales = optional_params_core_attrs["new_signal_space_scales"]
+    new_offsets = optional_params_core_attrs["new_signal_space_offsets"]
 
     h_old = np.sign(old_scales[0]) * (old_offsets[0]
                                       + old_scales[0]*np.arange(old_sizes[0]))
@@ -2877,16 +3604,19 @@ def _temp_resampling_params(input_signal, optional_params):
                                       + new_scales[0]*np.arange(new_sizes[0]))
     v_new = np.sign(old_scales[1]) * (new_offsets[1]
                                       + new_scales[1]*np.arange(new_sizes[1]))
+    
     s_h_new = int(np.sign(h_new[1]-h_new[0]))
     s_v_new = int(np.sign(v_new[1]-v_new[0]))
+    
     h_new = np.sort(h_new)
     v_new = np.sort(v_new)
 
-    spline_degrees = optional_params.core_attrs["spline_degrees"]
+    spline_degrees = \
+        optional_params_core_attrs["spline_degrees"]
     interpolate_polar_cmpnts = \
-        optional_params.core_attrs["interpolate_polar_cmpnts"]
+        optional_params_core_attrs["interpolate_polar_cmpnts"]
 
-    temp_resampling_params = \
+    input_signal_datasubset_resampling_params = \
         {"h_old": h_old,
          "v_old": v_old,
          "h_new": h_new,
@@ -2896,76 +3626,55 @@ def _temp_resampling_params(input_signal, optional_params):
          "spline_degrees": spline_degrees,
          "interpolate_polar_cmpnts": interpolate_polar_cmpnts}
 
-    return temp_resampling_params
+    return input_signal_datasubset_resampling_params
 
 
 
-def _resample_datasubset(input_datasubset, temp_resampling_params):
-    kwargs = {"x": temp_resampling_params["v_old"],
-              "y": temp_resampling_params["h_old"],
-              "z": None,
-              "bbox": [None, None, None, None],
-              "kx": temp_resampling_params["spline_degrees"][1],
-              "ky": temp_resampling_params["spline_degrees"][0],
-              "s": 0}
+def _resample_input_signal_datasubset(
+        input_signal_datasubset,
+        input_signal_datasubset_resampling_params):
+    kwargs = \
+        {"x": input_signal_datasubset_resampling_params["v_old"],
+         "y": input_signal_datasubset_resampling_params["h_old"],
+         "z": None,
+         "bbox": [None, None, None, None],
+         "kx": input_signal_datasubset_resampling_params["spline_degrees"][1],
+         "ky": input_signal_datasubset_resampling_params["spline_degrees"][0],
+         "s": 0}
 
-    v_new = temp_resampling_params["v_new"]
-    h_new = temp_resampling_params["h_new"]
+    v_new = \
+        input_signal_datasubset_resampling_params["v_new"]
+    h_new = \
+        input_signal_datasubset_resampling_params["h_new"]
+    polar_cmpnts_are_to_be_interpolated = \
+        input_signal_datasubset_resampling_params["interpolate_polar_cmpnts"]
 
-    if np.isrealobj(input_datasubset):
-        kwargs["z"] = input_datasubset
-        f = scipy.interpolate.RectBivariateSpline(**kwargs)
-        resampled_datasubset = f(v_new, h_new)
+    if np.isrealobj(input_signal_datasubset):
+        kwargs["z"] = input_signal_datasubset
+        method_alias = scipy.interpolate.RectBivariateSpline(**kwargs)
+        resampled_input_signal_datasubset = method_alias(v_new, h_new)
     else:
-        if temp_resampling_params["interpolate_polar_cmpnts"]:
-            kwargs["z"] = np.abs(input_datasubset)
-            f = scipy.interpolate.RectBivariateSpline(**kwargs)
-            mag = f(v_new, h_new)
-            kwargs["z"] = np.angle(input_datasubset)
-            f = scipy.interpolate.RectBivariateSpline(**kwargs)
-            angle = f(v_new, h_new)
-            resampled_datasubset = mag * np.exp(1j*angle)
-        else:
-            kwargs["z"] = np.real(input_datasubset)
-            f = scipy.interpolate.RectBivariateSpline(**kwargs)
-            real_part = f(v_new, h_new)
-            kwargs["z"] = np.imag(input_datasubset)
-            f = scipy.interpolate.RectBivariateSpline(**kwargs)
-            imag_part = f(v_new, h_new)
-            resampled_datasubset = real_part + 1j*imag_part
+        cmpnts = tuple()
+        np_funcs = ((np.abs, np.angle)
+                    if polar_cmpnts_are_to_be_interpolated
+                    else (np.real, np.imag))
 
-    s_h_new = temp_resampling_params["s_h_new"]
-    s_v_new = temp_resampling_params["s_v_new"]
-    resampled_datasubset[:, :] = resampled_datasubset[::s_v_new, ::s_h_new]
+        for np_func in np_funcs:
+            kwargs["z"] = np_func(input_signal_datasubset)
+            method_alias = scipy.interpolate.RectBivariateSpline(**kwargs)
+            cmpnts += (method_alias(v_new, h_new),)
 
-    return resampled_datasubset
+        resampled_input_signal_datasubset = (cmpnts[0] * np.exp(1j*cmpnts[1])
+                                             if (np_funcs[0] == np.abs)
+                                             else cmpnts[0] + 1j*cmpnts[1])
 
+    s_h_new = input_signal_datasubset_resampling_params["s_h_new"]
+    s_v_new = input_signal_datasubset_resampling_params["s_v_new"]
+    
+    resampled_input_signal_datasubset[:, :] = \
+        resampled_input_signal_datasubset[::s_v_new, ::s_h_new]
 
-
-def _update_output_signal_axes_v4(output_signal, input_signal, optional_params):
-    num_axes = len(input_signal.data.shape)
-
-    sizes = [output_signal.axes_manager[idx].scale for idx in range(num_axes)]
-    scales = [input_signal.axes_manager[idx].scale for idx in range(num_axes)]
-    offsets = [input_signal.axes_manager[idx].offset for idx in range(num_axes)]
-    units = [input_signal.axes_manager[idx].units for idx in range(num_axes)]
-    names = [input_signal.axes_manager[idx].name for idx in range(num_axes)]
-
-    for idx in (-2, -1):
-        scales[idx] = \
-              optional_params.core_attrs["new_signal_space_scales"][idx]
-        offsets[idx] = \
-              optional_params.core_attrs["new_signal_space_offsets"][idx]
-        
-    for idx in range(num_axes):
-        new_output_axis = hyperspy.axes.UniformDataAxis(size=sizes[idx],
-                                                        scale=scales[idx],
-                                                        offset=offsets[idx],
-                                                        units=units[idx])
-        output_signal.axes_manager[idx].update_from(new_output_axis)
-        output_signal.axes_manager[idx].name = names[idx]
-
-    return None
+    return resampled_input_signal_datasubset
 
 
 
@@ -2973,68 +3682,30 @@ def _update_output_signal_axes_v4(output_signal, input_signal, optional_params):
 ## Define error messages ##
 ###########################
 
-_check_and_convert_title_v1_err_msg_1 = \
-    ("The object ``title`` must be `NoneType` or a `str`.")
-
-_check_and_convert_center_v1_err_msg_1 = \
+_check_and_convert_center_err_msg_1 = \
     ("The object ``center`` must be `NoneType` or a pair of real numbers.")
-_check_and_convert_center_v2_err_msg_2 = \
+_check_and_convert_center_err_msg_2 = \
     ("The object ``center`` must specify a point within the boundaries of the "
      "input ``hyperspy`` signal.")
 
-_check_and_convert_radial_range_v1_err_msg_1 = \
+_check_and_convert_radial_range_err_msg_1 = \
     ("The object ``radial_range`` must be `NoneType` or a pair of non-negative "
-     "real numbers satisfying ``0<=radial_range[0]<=radial_range[1]``.")
+     "real numbers satisfying ``radial_range[0]<radial_range[1]``.")
 
-_check_and_convert_num_bins_v1_err_msg_1 = \
+_check_and_convert_num_bins_err_msg_1 = \
     ("The object ``num_bins`` must be `NoneType` or a positive `int`.")
 
-_check_and_convert_optional_params_v1_err_msg_1 = \
-    ("The object ``optional_params`` must be `NoneType` or an instance of the "
-     "class `OptionalAzimuthalAveragingParams`.")
+_check_and_convert_limits_err_msg_1 = \
+    ("The object ``limits`` must be `NoneType` or a pair of distinct real "
+     "numbers.")
 
-_azimuthally_integrate_err_msg_1 = \
-    ("The object ``optional_params`` must be `NoneType` or an instance of the "
-     "class `OptionalAzimuthalIntegrationParams`.")
-
-_annularly_average_err_msg_1 = \
-    ("The object ``optional_params`` must be `NoneType` or an instance of the "
-     "class `OptionalAnnularAveragingParams`.")
-
-_annularly_integrate_err_msg_1 = \
-    ("The object ``optional_params`` must be `NoneType` or an instance of the "
-     "class `OptionalAnnularIntegrationParams`.")
-
-_check_and_convert_optional_params_v2_err_msg_1 = \
-    ("The object ``optional_params`` must be `NoneType` or an instance of the "
-     "class `OptionalCumulative1dIntegrationParams`.")
-
-_check_and_convert_window_dims_v1_err_msg_1 = \
+_check_and_convert_window_dims_err_msg_1 = \
     ("The object ``window_dims`` must be `NoneType` or a pair of positive "
      "integers.")
-
-_check_and_convert_pad_mode_err_msg_1 = \
-    ("The object ``pad_mode`` must be either ``'no-padding'``, ``'wrap'``, or "
-     "``'zeros'``.")
-
-_check_and_convert_optional_params_v3_err_msg_1 = \
-    ("The object ``optional_params`` must be `NoneType` or an instance of the "
-     "class `OptionalCroppingParams`.")
 
 _crop_err_msg_1 = \
     ("The object ``optional_params`` specifies a crop that yields an output "
      "``hyperspy`` signal with zero elements.")
-
-_check_and_convert_optional_block_reduce_params_err_msg_1 = \
-    ("The key ``'{}'`` in the dictionary ``optional_block_reduce_params`` is "
-     "invalid: the only accepted keys are ``'block_size'``, ``'func'``, "
-     "``'cval'``, and ``'func_kwargs'``.")
-
-_check_and_convert_optional_block_reduce_params_err_msg_2 = \
-    ("The object ``optional_block_reduce_params`` specifies an invalid set of "
-     "optional parameters for the function "
-     ":func:`skimage.measure.block_reduce`: see the traceback above for "
-     "further details.")
 
 _check_and_convert_downsample_mode_err_msg_1 = \
     ("The object ``downsample_mode`` must be either ``'sum'``, ``'mean'``, "
@@ -3044,22 +3715,18 @@ _downsample_err_msg_1 = \
     ("The object ``optional_params`` must be `NoneType` or an instance of the "
      "class `OptionalDownsamplingParams`.")
 
-_check_and_convert_new_signal_space_sizes_v1_err_msg_1 = \
+_check_and_convert_new_signal_space_sizes_err_msg_1 = \
     ("The object ``new_signal_space_sizes`` must be `NoneType` or a pair of "
      "positive integers.")
 
-_check_and_convert_new_signal_space_scales_v1_err_msg_1 = \
+_check_and_convert_new_signal_space_scales_err_msg_1 = \
     ("The object ``new_signal_space_scales`` must be `NoneType` or a pair of "
      "non-zero real numbers.")
 
-_check_and_convert_new_signal_space_offsets_v1_err_msg_1 = \
+_check_and_convert_new_signal_space_offsets_err_msg_1 = \
     ("The object ``new_signal_space_offsets`` must be `NoneType` or a pair of "
      "real numbers.")
 
 _check_and_convert_spline_degrees_err_msg_1 = \
     ("The object ``spline_degrees`` must be a pair of positive integers where "
      "each integer is less than or equal to ``5``.")
-
-_check_and_convert_optional_params_v4_err_msg_1 = \
-    ("The object ``optional_params`` must be `NoneType` or an instance of the "
-     "class `OptionalResamplingParams`.")

@@ -53,7 +53,7 @@ examples = [
     "ipympl"
 ]
 docs = [
-    "sphinx",
+    "sphinx<7",
     "sphinx_rtd_theme",
     "sphinx-autodoc-typehints",
     "numpydoc",
