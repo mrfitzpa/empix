@@ -62,7 +62,7 @@ import skimage.measure
 
 
 # Get version of current package.
-from fancytypes.version import __version__
+from empix.version import __version__
 
 
 
