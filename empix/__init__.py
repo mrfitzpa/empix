@@ -23,12 +23,6 @@ microscopy data that are not available in `hyperspy
 ## Load libraries/packages/modules ##
 #####################################
 
-# For accessing attributes of functions.
-import inspect
-
-# For randomly selecting items in dictionaries.
-import random
-
 # For performing deep copies.
 import copy
 
@@ -92,9 +86,7 @@ __all__ = ["abs_sq",
 
 
 def _check_and_convert_action_to_apply_to_input_signal(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "action_to_apply_to_input_signal"
     action_to_apply_to_input_signal = params[obj_name]
 
     return action_to_apply_to_input_signal
@@ -102,9 +94,7 @@ def _check_and_convert_action_to_apply_to_input_signal(params):
 
 
 def _check_and_convert_input_signal(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "input_signal"
     input_signal = params[obj_name]
 
     action_to_apply_to_input_signal = params["action_to_apply_to_input_signal"]
@@ -131,9 +121,7 @@ def _check_and_convert_input_signal(params):
 
 
 def _check_and_convert_title(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "title"
     obj = params[obj_name]
 
     accepted_types = (str, type(None))
@@ -184,7 +172,7 @@ def _generate_title(input_signal, action_to_apply_to_input_signal):
 
 
 def _pre_serialize_title(title):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = title
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -227,17 +215,16 @@ def abs_sq(input_signal, title=_default_title):
 
     """
     params = locals()
-    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    params["action_to_apply_to_input_signal"] = "abs_sq"
+    global_symbol_table = globals()
     for param_name in params:
         func_name = "_check_and_convert_" + param_name
-        func_alias = globals()[func_name]
+        func_alias = global_symbol_table[func_name]
         params[param_name] = func_alias(params)
 
-    func_name = "_" + inspect.stack()[0][3]
-    func_alias = globals()[func_name]
     kwargs = params
     del kwargs["action_to_apply_to_input_signal"]
-    output_signal = func_alias(**kwargs)
+    output_signal = _abs_sq(**kwargs)
 
     return output_signal
 
@@ -257,9 +244,7 @@ def _abs_sq(input_signal, title):
 
 
 def _check_and_convert_center(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "center"
     obj = params[obj_name]
 
     param_name = "action_to_apply_to_input_signal"
@@ -267,6 +252,8 @@ def _check_and_convert_center(params):
 
     param_name = "input_signal"
     input_signal = params.get(param_name, None)
+
+    current_func_name = "_check_and_convert_center"
     
     if obj is not None:
         try:
@@ -331,7 +318,7 @@ def _calc_h_and_v_ranges(signal):
 
 
 def _pre_serialize_center(center):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = center
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -346,13 +333,13 @@ def _de_pre_serialize_center(serializable_rep):
 
 
 def _check_and_convert_radial_range(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "radial_range"
     obj = params[obj_name]
 
     param_name = "input_signal"
     input_signal = params.get(param_name, None)
+
+    current_func_name = "_check_and_convert_radial_range"
     
     if obj is not None:
         try:
@@ -381,7 +368,7 @@ def _check_and_convert_radial_range(params):
 
 
 def _pre_serialize_radial_range(radial_range):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = radial_range
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -396,13 +383,13 @@ def _de_pre_serialize_radial_range(serializable_rep):
 
 
 def _check_and_convert_num_bins(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "num_bins"
     obj = params[obj_name]
 
     param_name = "input_signal"
     input_signal = params.get(param_name, None)
+
+    current_func_name = "_check_and_convert_num_bins"
     
     if obj is not None:
         try:
@@ -433,7 +420,7 @@ def _signal_is_1d(signal):
 
 
 def _pre_serialize_num_bins(num_bins):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = num_bins
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -614,9 +601,7 @@ class OptionalAzimuthalAveragingParams(_cls_alias):
 
 
 def _check_and_convert_optional_params(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "optional_params"
     obj = params[obj_name]
 
     param_name = "action_to_apply_to_input_signal"
@@ -647,10 +632,11 @@ def _check_and_convert_optional_params(params):
         {"input_signal": _check_and_convert_input_signal(params),
          "action_to_apply_to_input_signal": action_to_apply_to_input_signal,
          **optional_params_core_attrs}
-    
+
+    global_symbol_table = globals()
     for param_name in optional_params_core_attrs:
         func_name = "_check_and_convert_" + param_name
-        func_alias = globals()[func_name]
+        func_alias = global_symbol_table[func_name]
         optional_params_core_attrs[param_name] = func_alias(params)
 
     kwargs = {"skip_validation_and_conversion": True,
@@ -711,17 +697,16 @@ def azimuthally_average(input_signal, optional_params=_default_optional_params):
 
     """
     params = locals()
-    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    params["action_to_apply_to_input_signal"] = "azimuthally_average"
+    global_symbol_table = globals()
     for param_name in params:
         func_name = "_check_and_convert_" + param_name
-        func_alias = globals()[func_name]
+        func_alias = global_symbol_table[func_name]
         params[param_name] = func_alias(params)
 
-    func_name = "_" + inspect.stack()[0][3]
-    func_alias = globals()[func_name]
     kwargs = params
     del kwargs["action_to_apply_to_input_signal"]
-    output_signal = func_alias(**kwargs)
+    output_signal = _azimuthally_average(**kwargs)
 
     return output_signal
 
@@ -1305,17 +1290,16 @@ def azimuthally_integrate(input_signal,
 
     """
     params = locals()
-    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    params["action_to_apply_to_input_signal"] = "azimuthally_integrate"
+    global_symbol_table = globals()
     for param_name in params:
         func_name = "_check_and_convert_" + param_name
-        func_alias = globals()[func_name]
+        func_alias = global_symbol_table[func_name]
         params[param_name] = func_alias(params)
 
-    func_name = "_" + inspect.stack()[0][3]
-    func_alias = globals()[func_name]
     kwargs = params
     del kwargs["action_to_apply_to_input_signal"]
-    output_signal = func_alias(**kwargs)
+    output_signal = _azimuthally_integrate(**kwargs)
 
     return output_signal
 
@@ -1548,17 +1532,16 @@ def annularly_average(input_signal, optional_params=_default_optional_params):
 
     """
     params = locals()
-    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    params["action_to_apply_to_input_signal"] = "annularly_average"
+    global_symbol_table = globals()
     for param_name in params:
         func_name = "_check_and_convert_" + param_name
-        func_alias = globals()[func_name]
+        func_alias = global_symbol_table[func_name]
         params[param_name] = func_alias(params)
 
-    func_name = "_" + inspect.stack()[0][3]
-    func_alias = globals()[func_name]
     kwargs = params
     del kwargs["action_to_apply_to_input_signal"]
-    output_signal = func_alias(**kwargs)
+    output_signal = _annularly_average(**kwargs)
 
     return output_signal
 
@@ -1783,17 +1766,16 @@ def annularly_integrate(input_signal, optional_params=_default_optional_params):
 
     """
     params = locals()
-    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    params["action_to_apply_to_input_signal"] = "annularly_integrate"
+    global_symbol_table = globals()
     for param_name in params:
         func_name = "_check_and_convert_" + param_name
-        func_alias = globals()[func_name]
+        func_alias = global_symbol_table[func_name]
         params[param_name] = func_alias(params)
 
-    func_name = "_" + inspect.stack()[0][3]
-    func_alias = globals()[func_name]
     kwargs = params
     del kwargs["action_to_apply_to_input_signal"]
-    output_signal = func_alias(**kwargs)
+    output_signal = _annularly_integrate(**kwargs)
 
     return output_signal
 
@@ -1819,14 +1801,14 @@ def _annularly_integrate(input_signal, optional_params):
 
 
 def _check_and_convert_limits(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "limits"
     obj = params[obj_name]
 
     param_name = "input_signal"
     input_signal = params.get(param_name, None)
     
+    current_func_name = "_check_and_convert_limits"
+
     if obj is not None:
         try:
             kwargs = {"obj": obj, "obj_name": obj_name}
@@ -1862,7 +1844,7 @@ def _calc_u_coords_1d(signal):
 
 
 def _pre_serialize_limits(limits):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = limits
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -1877,9 +1859,7 @@ def _de_pre_serialize_limits(serializable_rep):
 
 
 def _check_and_convert_normalize(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "normalize"
     kwargs = {"obj": params[obj_name], "obj_name": obj_name}
     normalize = czekitout.convert.to_bool(**kwargs)
 
@@ -1888,7 +1868,7 @@ def _check_and_convert_normalize(params):
 
 
 def _pre_serialize_normalize(normalize):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = normalize
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -2137,17 +2117,16 @@ def cumulatively_integrate_1d(input_signal,
 
     """
     params = locals()
-    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    params["action_to_apply_to_input_signal"] = "cumulatively_integrate_1d"
+    global_symbol_table = globals()
     for param_name in params:
         func_name = "_check_and_convert_" + param_name
-        func_alias = globals()[func_name]
+        func_alias = global_symbol_table[func_name]
         params[param_name] = func_alias(params)
 
-    func_name = "_" + inspect.stack()[0][3]
-    func_alias = globals()[func_name]
     kwargs = params
     del kwargs["action_to_apply_to_input_signal"]
-    output_signal = func_alias(**kwargs)
+    output_signal = _cumulatively_integrate_1d(**kwargs)
 
     return output_signal
 
@@ -2264,14 +2243,14 @@ def _cumulatively_integrate_input_signal_datasubset(input_signal_datasubset,
 
 
 def _check_and_convert_window_dims(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "window_dims"
     obj = params[obj_name]
 
     param_name = "input_signal"
     input_signal = params.get(param_name, None)
     
+    current_func_name = "_check_and_convert_window_dims"
+
     if obj is not None:
         try:
             kwargs = {"obj": obj, "obj_name": obj_name}
@@ -2291,7 +2270,7 @@ def _check_and_convert_window_dims(params):
 
 
 def _pre_serialize_window_dims(window_dims):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = window_dims
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -2306,9 +2285,7 @@ def _de_pre_serialize_window_dims(serializable_rep):
 
 
 def _check_and_convert_pad_mode(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "pad_mode"
     obj = params[obj_name]
 
     kwargs = {"obj": obj, "obj_name": obj_name}
@@ -2322,7 +2299,7 @@ def _check_and_convert_pad_mode(params):
 
 
 def _pre_serialize_pad_mode(pad_mode):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = pad_mode
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -2337,9 +2314,7 @@ def _de_pre_serialize_pad_mode(serializable_rep):
 
 
 def _check_and_convert_apply_symmetric_mask(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "apply_symmetric_mask"
     kwargs = {"obj": params[obj_name], "obj_name": obj_name}
     apply_symmetric_mask = czekitout.convert.to_bool(**kwargs)
 
@@ -2348,7 +2323,7 @@ def _check_and_convert_apply_symmetric_mask(params):
 
 
 def _pre_serialize_apply_symmetric_mask(apply_symmetric_mask):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = apply_symmetric_mask
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -2608,25 +2583,22 @@ def crop(input_signal, optional_params=_default_optional_params):
 
     """
     params = locals()
-    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    params["action_to_apply_to_input_signal"] = "crop"
+    global_symbol_table = globals()
     for param_name in params:
         func_name = "_check_and_convert_" + param_name
-        func_alias = globals()[func_name]
+        func_alias = global_symbol_table[func_name]
         params[param_name] = func_alias(params)
 
-    func_name = "_" + inspect.stack()[0][3]
-    func_alias = globals()[func_name]
     kwargs = params
     del kwargs["action_to_apply_to_input_signal"]
-    output_signal = func_alias(**kwargs)
+    output_signal = _crop(**kwargs)
 
     return output_signal
 
 
 
 def _crop(input_signal, optional_params):
-    current_func_name = inspect.stack()[0][3]
-
     optional_params_core_attrs = optional_params.get_core_attrs(deep_copy=False)
     title = optional_params_core_attrs["title"]
 
@@ -2636,6 +2608,8 @@ def _crop(input_signal, optional_params):
     
     navigation_dims = input_signal.data.shape[:-2]
     num_patterns = int(np.prod(navigation_dims))
+
+    current_func_name = "_crop"
 
     for pattern_idx in range(0, num_patterns):
         navigation_indices = np.unravel_index(pattern_idx, navigation_dims)
@@ -2798,9 +2772,7 @@ def _crop_input_signal_datasubset(input_signal_datasubset,
 
 
 def _check_and_convert_block_dims(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "block_dims"
     kwargs = {"obj": params[obj_name], "obj_name": obj_name}
     block_dims = czekitout.convert.to_pair_of_positive_ints(**kwargs)
     
@@ -2809,7 +2781,7 @@ def _check_and_convert_block_dims(params):
 
 
 def _pre_serialize_block_dims(block_dims):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = block_dims
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -2824,9 +2796,7 @@ def _de_pre_serialize_block_dims(serializable_rep):
 
 
 def _check_and_convert_padding_const(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "padding_const"
     kwargs = {"obj": params[obj_name], "obj_name": obj_name}
     padding_const = czekitout.convert.to_float(**kwargs)
 
@@ -2835,7 +2805,7 @@ def _check_and_convert_padding_const(params):
 
 
 def _pre_serialize_padding_const(padding_const):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = padding_const
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -2850,9 +2820,7 @@ def _de_pre_serialize_padding_const(serializable_rep):
 
 
 def _check_and_convert_downsample_mode(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "downsample_mode"
     kwargs = {"obj": params[obj_name], "obj_name": obj_name}
     downsample_mode = czekitout.convert.to_str_from_str_like(**kwargs)
 
@@ -2864,7 +2832,7 @@ def _check_and_convert_downsample_mode(params):
 
 
 def _pre_serialize_downsample_mode(downsample_mode):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = downsample_mode
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -3059,17 +3027,16 @@ def downsample(input_signal, optional_params=_default_optional_params):
 
     """
     params = locals()
-    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    params["action_to_apply_to_input_signal"] = "downsample"
+    global_symbol_table = globals()
     for param_name in params:
         func_name = "_check_and_convert_" + param_name
-        func_alias = globals()[func_name]
+        func_alias = global_symbol_table[func_name]
         params[param_name] = func_alias(params)
 
-    func_name = "_" + inspect.stack()[0][3]
-    func_alias = globals()[func_name]
     kwargs = params
     del kwargs["action_to_apply_to_input_signal"]
-    output_signal = func_alias(**kwargs)
+    output_signal = _downsample(**kwargs)
 
     return output_signal
 
@@ -3134,14 +3101,14 @@ def _downsample_input_signal_datasubset(input_signal_datasubset,
 
 
 def _check_and_convert_new_signal_space_sizes(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "new_signal_space_sizes"
     obj = params[obj_name]
 
     param_name = "input_signal"
     input_signal = params.get(param_name, None)
     
+    current_func_name = "_check_and_convert_new_signal_space_sizes"
+
     if obj is not None:
         try:
             func_alias = czekitout.convert.to_pair_of_positive_ints
@@ -3162,7 +3129,7 @@ def _check_and_convert_new_signal_space_sizes(params):
 
 
 def _pre_serialize_new_signal_space_sizes(new_signal_space_sizes):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = new_signal_space_sizes
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -3177,14 +3144,14 @@ def _de_pre_serialize_new_signal_space_sizes(serializable_rep):
 
 
 def _check_and_convert_new_signal_space_scales(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "new_signal_space_scales"
     obj = params[obj_name]
 
     param_name = "input_signal"
     input_signal = params.get(param_name, None)
     
+    current_func_name = "_check_and_convert_new_signal_space_scales"
+
     if obj is not None:
         try:
             func_alias = czekitout.convert.to_pair_of_floats
@@ -3209,7 +3176,7 @@ def _check_and_convert_new_signal_space_scales(params):
 
 
 def _pre_serialize_new_signal_space_scales(new_signal_space_scales):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = new_signal_space_scales
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -3224,14 +3191,14 @@ def _de_pre_serialize_new_signal_space_scales(serializable_rep):
 
 
 def _check_and_convert_new_signal_space_offsets(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "new_signal_space_offsets"
     obj = params[obj_name]
 
     param_name = "input_signal"
     input_signal = params.get(param_name, None)
     
+    current_func_name = "_check_and_convert_new_signal_space_offsets"
+
     if obj is not None:
         try:
             func_alias = czekitout.convert.to_pair_of_floats
@@ -3252,7 +3219,7 @@ def _check_and_convert_new_signal_space_offsets(params):
 
 
 def _pre_serialize_new_signal_space_offsets(new_signal_space_offsets):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = new_signal_space_offsets
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -3267,11 +3234,11 @@ def _de_pre_serialize_new_signal_space_offsets(serializable_rep):
 
 
 def _check_and_convert_spline_degrees(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "spline_degrees"
     kwargs = {"obj": params[obj_name], "obj_name": obj_name}
     spline_degrees = czekitout.convert.to_pair_of_positive_ints(**kwargs)
+
+    current_func_name = "_check_and_convert_spline_degrees"
 
     if (spline_degrees[0] > 5) or (spline_degrees[1] > 5):
         err_msg = globals()[current_func_name+"_err_msg_1"]
@@ -3282,7 +3249,7 @@ def _check_and_convert_spline_degrees(params):
 
 
 def _pre_serialize_spline_degrees(spline_degrees):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = spline_degrees
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -3297,9 +3264,7 @@ def _de_pre_serialize_spline_degrees(serializable_rep):
 
 
 def _check_and_convert_interpolate_polar_cmpnts(params):
-    current_func_name = inspect.stack()[0][3]
-    char_idx = 19
-    obj_name = current_func_name[char_idx:]
+    obj_name = "interpolate_polar_cmpnts"
     kwargs = {"obj": params[obj_name], "obj_name": obj_name}
     interpolate_polar_cmpnts = czekitout.convert.to_bool(**kwargs)
 
@@ -3308,7 +3273,7 @@ def _check_and_convert_interpolate_polar_cmpnts(params):
 
 
 def _pre_serialize_interpolate_polar_cmpnts(interpolate_polar_cmpnts):
-    obj_to_pre_serialize = random.choice(list(locals().values()))
+    obj_to_pre_serialize = interpolate_polar_cmpnts
     serializable_rep = obj_to_pre_serialize
     
     return serializable_rep
@@ -3521,17 +3486,16 @@ def resample(input_signal, optional_params=_default_optional_params):
 
     """
     params = locals()
-    params["action_to_apply_to_input_signal"] = inspect.stack()[0][3]
+    params["action_to_apply_to_input_signal"] = "resample"
+    global_symbol_table = globals()
     for param_name in params:
         func_name = "_check_and_convert_" + param_name
-        func_alias = globals()[func_name]
+        func_alias = global_symbol_table[func_name]
         params[param_name] = func_alias(params)
 
-    func_name = "_" + inspect.stack()[0][3]
-    func_alias = globals()[func_name]
     kwargs = params
     del kwargs["action_to_apply_to_input_signal"]
-    output_signal = func_alias(**kwargs)
+    output_signal = _resample(**kwargs)
 
     return output_signal
 
