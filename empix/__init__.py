@@ -26,6 +26,10 @@ microscopy data that are not available in `hyperspy
 # For performing deep copies.
 import copy
 
+# For checking whether certain submodules exists and for importing said
+# submodules should they exist.
+import importlib
+
 
 
 # For general array handling.
@@ -47,8 +51,10 @@ import hyperspy.signals
 import hyperspy.axes
 
 # For azimuthally integrating 2D hyperspy signals.
-import pyFAI.detectors
-import pyFAI.azimuthalIntegrator
+detectors = importlib.import_module("pyFAI.detectors")
+integrators = (importlib.import_module("pyFAI.integrator.azimuthal")
+               if importlib.util.find_spec("pyFAI.integrator")
+               else importlib.import_module("pyFAI.azimuthalIntegrator"))
 
 # For downsampling hyperspy signals.
 import skimage.measure
@@ -764,7 +770,11 @@ def _construct_azimuthal_integrator(signal, center):
     v_pixel_size = abs(v_scale)
     L = 10000 * max(v_pixel_size, h_pixel_size)
 
-    AzimuthalIntegrator = pyFAI.azimuthalIntegrator.AzimuthalIntegrator
+    # ``integrators`` is an alias to a pyFAI submodule that was imported near
+    # the top of the current file using the ``importlib.import_module``
+    # function.
+    AzimuthalIntegrator = integrators.AzimuthalIntegrator
+    
     kwargs = {"dist": L,
               "poni1": poni_1,
               "poni2": poni_2,
@@ -779,8 +789,12 @@ def _construct_pyfai_detector(signal):
     h_pixel_size = abs(signal.axes_manager[-2].scale)
     v_pixel_size = abs(signal.axes_manager[-1].scale)
 
+    # ``detectors`` is an alias to a pyFAI submodule that was imported near the
+    # top of the current file using the ``importlib.import_module`` function.
+    Detector = detectors.Detector
+
     kwargs = {"pixel1": v_pixel_size, "pixel2": h_pixel_size}
-    detector = pyFAI.detectors.Detector(**kwargs)
+    detector = Detector(**kwargs)
 
     return detector
 
