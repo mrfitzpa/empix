@@ -39,7 +39,7 @@ keywords = [
 dependencies = [
     "czekitout",
     "fancytypes>=1.0.0",
-    "hyperspy[all]",
+    "hyperspy",
     "pyFAI"
 ]
 requires-python = ">=3.8"
