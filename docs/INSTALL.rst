@@ -3,6 +3,9 @@
 Instructions for installing and uninstalling ``empix``
 ======================================================
 
+Installing ``empix``
+--------------------
+
 For all installation scenarios, first open up the appropriate command line
 interface. On Unix-based systems, you could open e.g. a terminal. On Windows
 systems you could open e.g. an Anaconda Prompt as an administrator.
@@ -10,7 +13,7 @@ systems you could open e.g. an Anaconda Prompt as an administrator.
 
 
 Installing ``empix`` using ``pip``
-----------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Before installing ``empix``, make sure that you have activated the (virtual)
 environment in which you intend to install said package. After which, simply
@@ -59,7 +62,7 @@ the subset of additional dependencies specified by ``<selector>``.
 
 
 Installing ``empix`` using ``conda``
-------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To install ``empix`` using the ``conda`` package manager, run the
 following command::
