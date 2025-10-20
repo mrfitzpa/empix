@@ -40,7 +40,8 @@ dependencies = [
     "czekitout",
     "fancytypes>=1.0.0",
     "hyperspy",
-    "pyFAI"
+    "pyFAI",
+    "numba"
 ]
 requires-python = ">=3.8"
 
