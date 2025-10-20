@@ -3,6 +3,8 @@
 Instructions for installing and uninstalling ``empix``
 ======================================================
 
+
+
 Installing ``empix``
 --------------------
 
@@ -16,8 +18,8 @@ Installing ``empix`` using ``pip``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Before installing ``empix``, make sure that you have activated the (virtual)
-environment in which you intend to install said package. After which, simply
-change into the root of the repository, and run the following command::
+environment in which you intend to install said package. After which, simply run
+the following command::
 
   pip install empix
 
@@ -64,8 +66,11 @@ the subset of additional dependencies specified by ``<selector>``.
 Installing ``empix`` using ``conda``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To install ``empix`` using the ``conda`` package manager, run the
-following command::
+Before proceeding, make sure that you have activated the (virtual) ``conda``
+environment in which you intend to install said package.
+
+To install ``empix`` using the ``conda`` package manager, run the following
+command::
 
   conda install -c conda-forge empix
 
