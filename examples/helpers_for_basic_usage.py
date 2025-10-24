@@ -39,18 +39,8 @@ import hyperspy.axes
 # List of public objects in module.
 __all__ = ["generate_real_2d_input_signal",
            "generate_complex_2d_input_signal",
-           "generate_complex_2d_input_signal_data",
-           "generate_complex_2d_input_signal_data_shape",
-           "generate_complex_2d_input_signal_metadata",
-           "generate_ring_centers_in_pixel_coords",
-           "generate_complex_2d_input_signal_axes",
            "generate_real_1d_input_signal",
-           "generate_complex_1d_input_signal",
-           "generate_complex_1d_input_signal_data",
-           "generate_complex_1d_input_signal_data_shape",
-           "generate_complex_1d_input_signal_metadata",
-           "generate_slopes",
-           "generate_complex_1d_input_signal_axes"]
+           "generate_complex_1d_input_signal"]
 
 
 
@@ -73,11 +63,11 @@ def generate_real_2d_input_signal():
 
 
 def generate_complex_2d_input_signal():
-    kwargs = {"data": generate_complex_2d_input_signal_data(), 
-              "metadata": generate_complex_2d_input_signal_metadata()}
+    kwargs = {"data": _generate_complex_2d_input_signal_data(), 
+              "metadata": _generate_complex_2d_input_signal_metadata()}
     complex_2d_input_signal = hyperspy.signals.ComplexSignal2D(**kwargs)
 
-    axes = generate_complex_2d_input_signal_axes()
+    axes = _generate_complex_2d_input_signal_axes()
 
     for axis_idx, axis in enumerate(axes):
         complex_2d_input_signal.axes_manager[axis_idx].update_from(axis)
@@ -88,11 +78,11 @@ def generate_complex_2d_input_signal():
 
 
 
-def generate_complex_2d_input_signal_data():
-    signal_data_shape = generate_complex_2d_input_signal_data_shape()
+def _generate_complex_2d_input_signal_data():
+    signal_data_shape = _generate_complex_2d_input_signal_data_shape()
     Y_dim, X_dim, v_dim, h_dim = signal_data_shape
 
-    metadata = generate_complex_2d_input_signal_metadata()
+    metadata = _generate_complex_2d_input_signal_metadata()
     ring_centers_in_pixel_coords = metadata["ring_centers_in_pixel_coords"]
     inner_ring_radius_in_pixels = metadata["inner_ring_radius_in_pixels"]
     outer_ring_radius_in_pixels = metadata["outer_ring_radius_in_pixels"]
@@ -136,21 +126,21 @@ def generate_complex_2d_input_signal_data():
 
 
 
-def generate_complex_2d_input_signal_data_shape():
+def _generate_complex_2d_input_signal_data_shape():
     complex_2d_input_signal_data_shape = (3, 2, 181, 200)
     
     return complex_2d_input_signal_data_shape
 
 
 
-def generate_complex_2d_input_signal_metadata():
-    axes = generate_complex_2d_input_signal_axes()
+def _generate_complex_2d_input_signal_metadata():
+    axes = _generate_complex_2d_input_signal_axes()
     h_offset = axes[-2].offset
     h_scale = axes[-2].scale
     v_offset = axes[-1].offset
     v_scale = axes[-1].scale
 
-    ring_centers_in_pixel_coords = generate_ring_centers_in_pixel_coords()
+    ring_centers_in_pixel_coords = _generate_ring_centers_in_pixel_coords()
     
     ring_centers = np.array(ring_centers_in_pixel_coords, dtype="float")
     ring_centers[:, :, 0] = h_offset + ring_centers[:, :, 0]*h_scale
@@ -187,8 +177,8 @@ def generate_complex_2d_input_signal_metadata():
 
 
 
-def generate_ring_centers_in_pixel_coords():
-    signal_data_shape = generate_complex_2d_input_signal_data_shape()
+def _generate_ring_centers_in_pixel_coords():
+    signal_data_shape = _generate_complex_2d_input_signal_data_shape()
     Y_dim, X_dim, v_dim, h_dim = signal_data_shape
     
     ring_centers_in_pixel_coords = np.zeros((Y_dim, X_dim, 2), dtype="int")
@@ -207,8 +197,8 @@ def generate_ring_centers_in_pixel_coords():
 
 
 
-def generate_complex_2d_input_signal_axes():
-    signal_data_shape = generate_complex_2d_input_signal_data_shape()
+def _generate_complex_2d_input_signal_axes():
+    signal_data_shape = _generate_complex_2d_input_signal_data_shape()
     Y_dim, X_dim, v_dim, h_dim = signal_data_shape
 
     d_h = 0.1
@@ -251,11 +241,11 @@ def generate_real_1d_input_signal():
 
 
 def generate_complex_1d_input_signal():
-    kwargs = {"data": generate_complex_1d_input_signal_data(), 
-              "metadata": generate_complex_1d_input_signal_metadata()}
+    kwargs = {"data": _generate_complex_1d_input_signal_data(), 
+              "metadata": _generate_complex_1d_input_signal_metadata()}
     complex_1d_input_signal = hyperspy.signals.ComplexSignal1D(**kwargs)
 
-    axes = generate_complex_1d_input_signal_axes()
+    axes = _generate_complex_1d_input_signal_axes()
 
     for axis_idx, axis in enumerate(axes):
         complex_1d_input_signal.axes_manager[axis_idx].update_from(axis)
@@ -266,11 +256,11 @@ def generate_complex_1d_input_signal():
 
 
 
-def generate_complex_1d_input_signal_data():
-    signal_data_shape = generate_complex_1d_input_signal_data_shape()
+def _generate_complex_1d_input_signal_data():
+    signal_data_shape = _generate_complex_1d_input_signal_data_shape()
     Y_dim, X_dim, u_dim = signal_data_shape
 
-    metadata = generate_complex_1d_input_signal_metadata()
+    metadata = _generate_complex_1d_input_signal_metadata()
     slopes = metadata["slopes"]
     y_intercept_of_real_part = metadata["y_intercept_of_real_part"]
     y_intercept_of_imag_part = metadata["y_intercept_of_imag_part"]
@@ -281,7 +271,7 @@ def generate_complex_1d_input_signal_data():
     navigation_dims = (Y_dim, X_dim)
     num_patterns = Y_dim*X_dim
 
-    axes = generate_complex_1d_input_signal_axes()
+    axes = _generate_complex_1d_input_signal_axes()
     d_u = axes[-1].scale
 
     n_u = np.arange(u_dim)
@@ -305,17 +295,17 @@ def generate_complex_1d_input_signal_data():
 
 
 
-def generate_complex_1d_input_signal_data_shape():
+def _generate_complex_1d_input_signal_data_shape():
     complex_1d_input_signal_data_shape = (3, 2, 200)
     
     return complex_1d_input_signal_data_shape
 
 
 
-def generate_complex_1d_input_signal_metadata():
+def _generate_complex_1d_input_signal_metadata():
     metadata = {"General": {"title": "First Complex 1D Input"}, 
                 "Signal": dict(), 
-                "slopes": generate_slopes(), 
+                "slopes": _generate_slopes(), 
                 "y_intercept_of_real_part": 0,
                 "y_intercept_of_imag_part": 10}
 
@@ -325,8 +315,8 @@ def generate_complex_1d_input_signal_metadata():
 
 
 
-def generate_slopes():
-    signal_data_shape = generate_complex_1d_input_signal_data_shape()
+def _generate_slopes():
+    signal_data_shape = _generate_complex_1d_input_signal_data_shape()
     Y_dim, X_dim, r_dim = signal_data_shape
     
     slopes = np.zeros((Y_dim, X_dim))
@@ -341,8 +331,8 @@ def generate_slopes():
 
 
 
-def generate_complex_1d_input_signal_axes():
-    signal_data_shape = generate_complex_1d_input_signal_data_shape()
+def _generate_complex_1d_input_signal_axes():
+    signal_data_shape = _generate_complex_1d_input_signal_data_shape()
     Y_dim, X_dim, u_dim = signal_data_shape
 
     axes_sizes = (X_dim, Y_dim, u_dim)
