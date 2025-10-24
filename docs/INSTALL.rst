@@ -82,11 +82,11 @@ Uninstalling ``empix``
 ----------------------
 
 If ``empix`` was installed using ``pip``, then to uninstall, run the
-following command from the root of the repository::
+following command::
 
   pip uninstall empix
 
 If ``empix`` was installed using ``conda``, then to uninstall, run the
-following command from the root of the repository::
+following command::
 
   conda remove empix

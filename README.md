@@ -48,8 +48,8 @@ systems you could open e.g. an Anaconda Prompt as an administrator.
 #### Installing `empix` using `pip`
 
 Before installing `empix`, make sure that you have activated the (virtual)
-environment in which you intend to install said package. After which, simply
-change into the root of the repository, and run the following command:
+environment in which you intend to install said package. After which, simply run
+the following command:
 
     pip install empix
 
@@ -106,12 +106,12 @@ The above command will install the latest stable version of `empix`.
 ### Uninstalling `empix`
 
 If `empix` was installed using `pip`, then to uninstall, run the following
-command from the root of the repository:
+command:
 
     pip uninstall empix
 
 If `empix` was installed using `conda`, then to uninstall, run the
-following command from the root of the repository:
+following command:
 
     conda remove empix
 
