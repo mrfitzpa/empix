@@ -23,7 +23,7 @@
 ## Load libraries/packages/modules ##
 #####################################
 
-# For general array handling and constructing random number generators.
+# For general array handling.
 import numpy as np
 
 # For creating hyperspy signals.
