@@ -41,7 +41,8 @@ dependencies = [
     "fancytypes>=1.0.0",
     "hyperspy",
     "pyFAI",
-    "numba"
+    "numba",
+    "scikit-image"
 ]
 requires-python = ">=3.8"
 
