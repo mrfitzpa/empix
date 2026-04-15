@@ -2763,21 +2763,18 @@ def _crop_input_signal_datasubset(input_signal_datasubset,
 
     num_spatial_dims = len(input_signal_datasubset.shape)
 
-    cropped_input_signal_datasubset = input_signal_datasubset
+    idx_seqs = tuple()
     for spatial_dim_idx in range(num_spatial_dims):
-        single_dim_slice_for_cropping = \
-            multi_dim_slice_for_cropping[-(spatial_dim_idx+1)]
-        
-        indices = np.arange(single_dim_slice_for_cropping.start,
-                            single_dim_slice_for_cropping.stop,
-                            dtype="int")
-        
-        kwargs = {"a": cropped_input_signal_datasubset,
-                  "indices": indices,
-                  "axis": 1-spatial_dim_idx,
-                  "mode": "wrap"}
-        cropped_input_signal_datasubset = np.take(**kwargs)
-    
+        single_dim_slice = multi_dim_slice_for_cropping[spatial_dim_idx]
+
+        idx_seq = (np.arange(single_dim_slice.start,
+                             single_dim_slice.stop,
+                             dtype="int")
+                   % input_signal_datasubset.shape[spatial_dim_idx])
+        idx_seqs += (idx_seq,)
+
+    cropped_input_signal_datasubset = input_signal_datasubset[np.ix_(*idx_seqs)]
+
     if mask_to_apply_for_crop is not None:
         cropped_input_signal_datasubset *= (~mask_to_apply_for_crop)
 
